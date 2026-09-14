@@ -26,7 +26,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
@@ -68,17 +70,13 @@ import com.calmpulse.audio.VoiceSpeaker
 import com.calmpulse.data.model.MessageSender
 import com.calmpulse.ui.components.BreathingCircle
 import com.calmpulse.ui.components.ChatBubble
-import com.calmpulse.ui.theme.CalmingBackground
-import com.calmpulse.ui.theme.MistBlue
-import com.calmpulse.ui.theme.SageGreen
-import com.calmpulse.ui.theme.SoftLavender
-import com.calmpulse.ui.theme.TextPrimary
-import com.calmpulse.ui.theme.TextSecondary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
-    viewModel: ChatViewModel = viewModel()
+    viewModel: ChatViewModel = viewModel(),
+    isDarkTheme: Boolean = false,
+    onToggleTheme: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -161,27 +159,37 @@ fun ChatScreen(
     }
 
     Scaffold(
-        containerColor = CalmingBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
                     Column {
                         Text(
                             text = "CalmPulse",
-                            style = MaterialTheme.typography.titleLarge.copy(color = TextPrimary)
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
                         )
                         Text(
                             text = if (isListening) "Ouvindo com calma..." else "Acolhimento imediato",
-                            style = MaterialTheme.typography.labelSmall.copy(color = SageGreen)
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = CalmingBackground),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                ),
                 actions = {
                     // Botão para mutar a voz a qualquer momento
                     if (isSpeaking) {
                         IconButton(onClick = { speaker.stop() }) {
-                            Icon(Icons.Default.VolumeMute, contentDescription = "Mutar voz", tint = SageGreen)
+                            Icon(
+                                Icons.Default.VolumeMute,
+                                contentDescription = "Mutar voz",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
 
@@ -190,7 +198,16 @@ fun ChatScreen(
                         Icon(
                             Icons.Default.Spa,
                             contentDescription = "Exercício de Respiração",
-                            tint = if (showBreathingExercise) SageGreen else TextSecondary
+                            tint = if (showBreathingExercise) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Botão para alternar entre Modo Claro e Modo Escuro Acolhedor
+                    IconButton(onClick = onToggleTheme) {
+                        Icon(
+                            imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = if (isDarkTheme) "Mudar para modo claro" else "Mudar para modo noturno",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -203,7 +220,7 @@ fun ChatScreen(
                             Icon(
                                 Icons.Default.Refresh,
                                 contentDescription = "Reiniciar acolhimento",
-                                tint = TextSecondary
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -217,7 +234,7 @@ fun ChatScreen(
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .imePadding()
-                    .background(CalmingBackground)
+                    .background(MaterialTheme.colorScheme.background)
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Row(
@@ -230,12 +247,16 @@ fun ChatScreen(
                         placeholder = {
                             Text(
                                 "Fale ou digite como você está...",
-                                style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary)
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             )
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White,
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent
                         ),
@@ -253,9 +274,13 @@ fun ChatScreen(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(CircleShape)
-                                .background(SageGreen)
+                                .background(MaterialTheme.colorScheme.primary)
                         ) {
-                            Icon(Icons.Default.Send, contentDescription = "Enviar", tint = Color.White)
+                            Icon(
+                                Icons.Default.Send,
+                                contentDescription = "Enviar",
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
                         }
                     } else {
                         // Botão Flutuante de Voz (STT)
@@ -276,8 +301,8 @@ fun ChatScreen(
                                     }
                                 }
                             },
-                            containerColor = if (isListening) SoftLavender else SageGreen,
-                            contentColor = Color.White,
+                            containerColor = if (isListening) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
                             shape = CircleShape,
                             modifier = Modifier.size(48.dp)
                         ) {
@@ -309,7 +334,9 @@ fun ChatScreen(
             AnimatedVisibility(visible = voiceErrorMessage != null) {
                 Card(
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = SoftLavender.copy(alpha = 0.45f)),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 6.dp)
@@ -322,13 +349,15 @@ fun ChatScreen(
                         Icon(
                             Icons.Default.Info,
                             contentDescription = null,
-                            tint = SageGreen,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = voiceErrorMessage ?: "",
-                            style = MaterialTheme.typography.bodySmall.copy(color = TextPrimary),
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -354,7 +383,7 @@ fun ChatScreen(
                             Text(
                                 text = "Olá. Estou aqui com você.\nRespire devagar e me conte o que está sentindo, no seu tempo.",
                                 style = MaterialTheme.typography.bodyLarge.copy(
-                                    color = TextSecondary,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     lineHeight = 24.sp
                                 ),
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center

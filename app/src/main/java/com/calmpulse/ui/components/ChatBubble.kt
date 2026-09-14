@@ -1,6 +1,7 @@
 package com.calmpulse.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,9 +31,9 @@ import com.calmpulse.data.model.ChatMessage
 import com.calmpulse.data.model.MessageSender
 import com.calmpulse.ui.theme.ChatBubbleAi
 import com.calmpulse.ui.theme.ChatBubbleUser
-import com.calmpulse.ui.theme.SageGreen
-import com.calmpulse.ui.theme.TextPrimary
-import com.calmpulse.ui.theme.TextSecondary
+import com.calmpulse.ui.theme.DarkBackground
+import com.calmpulse.ui.theme.DarkChatBubbleAi
+import com.calmpulse.ui.theme.DarkChatBubbleUser
 
 @Composable
 fun ChatBubble(
@@ -42,6 +43,14 @@ fun ChatBubble(
     onStopSpeakClick: () -> Unit = {}
 ) {
     val isUser = message.sender == MessageSender.USER
+    val isDark = MaterialTheme.colorScheme.background == DarkBackground
+
+    // Cores dinâmicas de acordo com o tema ativo
+    val bubbleColor = if (isUser) {
+        if (isDark) DarkChatBubbleUser else ChatBubbleUser
+    } else {
+        if (isDark) DarkChatBubbleAi else ChatBubbleAi
+    }
 
     // Alinhamento: Usuário à direita, IA à esquerda
     Row(
@@ -59,7 +68,16 @@ fun ChatBubble(
         Box(
             modifier = Modifier
                 .clip(bubbleShape)
-                .background(if (isUser) ChatBubbleUser else ChatBubbleAi)
+                .background(bubbleColor)
+                .then(
+                    if (!isUser) {
+                        Modifier.border(
+                            width = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = if (isDark) 0.35f else 0.5f),
+                            shape = bubbleShape
+                        )
+                    } else Modifier
+                )
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
             Column {
@@ -72,7 +90,7 @@ fun ChatBubble(
                         Text(
                             text = "CalmPulse",
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = SageGreen,
+                                color = MaterialTheme.colorScheme.primary,
                                 fontSize = 11.sp
                             )
                         )
@@ -82,7 +100,7 @@ fun ChatBubble(
                             Icon(
                                 imageVector = if (isSpeakingThisMessage) Icons.Default.VolumeMute else Icons.Default.VolumeUp,
                                 contentDescription = "Ouvir mensagem",
-                                tint = SageGreen,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier
                                     .size(18.dp)
                                     .clickable {
@@ -98,20 +116,24 @@ fun ChatBubble(
                 if (message.text.isBlank() && message.isStreaming) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(
-                            color = SageGreen,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Pensando com calma...",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary)
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         )
                     }
                 } else {
                     Text(
                         text = message.text,
-                        style = MaterialTheme.typography.bodyLarge.copy(color = TextPrimary)
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     )
                 }
             }

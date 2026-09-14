@@ -27,13 +27,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.calmpulse.ui.theme.DarkBackground
+import com.calmpulse.ui.theme.DarkMistBlue
+import com.calmpulse.ui.theme.DarkPulseGlow
+import com.calmpulse.ui.theme.DarkSageGreen
+import com.calmpulse.ui.theme.DarkSageGreenDark
+import com.calmpulse.ui.theme.DarkSageGreenLight
+import com.calmpulse.ui.theme.DarkSoftLavender
 import com.calmpulse.ui.theme.MistBlue
 import com.calmpulse.ui.theme.PulseGlow
 import com.calmpulse.ui.theme.SageGreen
 import com.calmpulse.ui.theme.SageGreenLight
 import com.calmpulse.ui.theme.SoftLavender
-import com.calmpulse.ui.theme.TextPrimary
-import com.calmpulse.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
 
 enum class BreathingPhase(
@@ -54,6 +59,7 @@ fun BreathingCircle(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val hapticHelper = remember { com.calmpulse.util.HapticFeedbackHelper(context) }
+    val isDark = MaterialTheme.colorScheme.background == DarkBackground
 
     var currentPhase by remember { mutableStateOf(BreathingPhase.INHALE) }
     var secondsRemaining by remember { mutableStateOf(currentPhase.durationSeconds) }
@@ -101,6 +107,26 @@ fun BreathingCircle(
         label = "BreathingScale"
     )
 
+    val glowColor = if (isDark) DarkPulseGlow else PulseGlow
+    val intermediateGradient = if (isDark) {
+        Brush.radialGradient(
+            colors = listOf(DarkSoftLavender.copy(alpha = 0.35f), DarkMistBlue.copy(alpha = 0.5f))
+        )
+    } else {
+        Brush.radialGradient(
+            colors = listOf(SoftLavender.copy(alpha = 0.45f), MistBlue.copy(alpha = 0.6f))
+        )
+    }
+    val innerGradient = if (isDark) {
+        Brush.verticalGradient(
+            colors = listOf(DarkSageGreenLight, DarkSageGreenDark)
+        )
+    } else {
+        Brush.verticalGradient(
+            colors = listOf(SageGreenLight, SageGreen)
+        )
+    }
+
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -116,7 +142,7 @@ fun BreathingCircle(
                     .size(220.dp)
                     .scale(animatedScale * 1.15f)
                     .clip(CircleShape)
-                    .background(PulseGlow)
+                    .background(glowColor)
             )
 
             // Círculo intermediário com gradiente relaxante
@@ -125,11 +151,7 @@ fun BreathingCircle(
                     .size(190.dp)
                     .scale(animatedScale * 1.05f)
                     .clip(CircleShape)
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(SoftLavender.copy(alpha = 0.45f), MistBlue.copy(alpha = 0.6f))
-                        )
-                    )
+                    .background(intermediateGradient)
             )
 
             // Círculo principal onde o texto reside
@@ -138,11 +160,7 @@ fun BreathingCircle(
                     .size(160.dp)
                     .scale(animatedScale)
                     .clip(CircleShape)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(SageGreenLight, SageGreen)
-                        )
-                    ),
+                    .background(innerGradient),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -174,7 +192,7 @@ fun BreathingCircle(
         Text(
             text = currentPhase.subtitle,
             style = MaterialTheme.typography.bodyLarge.copy(
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Medium
             ),
             textAlign = TextAlign.Center
@@ -183,7 +201,7 @@ fun BreathingCircle(
         Text(
             text = "Técnica de Respiração 4-7-8",
             style = MaterialTheme.typography.labelSmall.copy(
-                color = TextSecondary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             ),
             textAlign = TextAlign.Center
         )

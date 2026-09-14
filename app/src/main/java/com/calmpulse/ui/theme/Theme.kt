@@ -3,6 +3,7 @@ package com.calmpulse.ui.theme
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -22,23 +23,43 @@ private val LightColorScheme = lightColorScheme(
     surface = SurfaceCard,
     onSurface = TextPrimary,
     surfaceVariant = MistBlue,
-    onSurfaceVariant = TextSecondary
+    onSurfaceVariant = TextSecondary,
+    outline = SoftLavender.copy(alpha = 0.5f)
+)
+
+private val DarkColorScheme = darkColorScheme(
+    primary = DarkSageGreen,
+    onPrimary = DarkBackground,
+    primaryContainer = DarkMistBlue,
+    onPrimaryContainer = DarkTextPrimary,
+    secondary = DarkSoftLavender,
+    onSecondary = DarkBackground,
+    background = DarkBackground,
+    onBackground = DarkTextPrimary,
+    surface = DarkSurfaceCard,
+    onSurface = DarkTextPrimary,
+    surfaceVariant = DarkSurfaceVariant,
+    onSurfaceVariant = DarkTextSecondary,
+    outline = DarkMistBlue
 )
 
 @Composable
 fun CalmPulseTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = LightColorScheme
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val view = LocalView.current
 
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = CalmingBackground.toArgb()
-            window.navigationBarColor = CalmingBackground.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = true
-            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = true
+            val bgColor = colorScheme.background.toArgb()
+            window.statusBarColor = bgColor
+            window.navigationBarColor = bgColor
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            insetsController.isAppearanceLightStatusBars = !darkTheme
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 

@@ -81,19 +81,27 @@ c:\dev\CalmPulse\
 
 ---
 
-## 🎨 4. Design System Aconchegante
+## 🎨 4. Design System Aconchegante & Modo Noturno
 
-As cores foram cientificamente selecionadas para reduzir o estímulo visual:
+As cores foram cientificamente selecionadas para reduzir o estímulo sensorial e fadiga visual:
+
+### Paleta Diurna (Modo Claro)
 * **Verde-Sálvia (`#7A9A85`):** Aterramento, tranquilidade e sensação de segurança.
 * **Lavanda Suave (`#B8B5D1`):** Redução da ansiedade e desaceleração mental.
 * **Azul Névoa (`#D9E2EC`):** Sensação de ar e respiração profunda.
 * **Fundo Quente/Desaturado (`#F4F6F8`):** Conforto aos olhos sem o ofuscamento do branco puro.
 
+### Paleta Noturna (Deep Slate / Dark Mode para Crises Noturnas)
+* **Carvão Ardósia Profundo (`#101418`):** Evita o preto puro (#000) e elimina efeito de ofuscamento (*halation*) no escuro.
+* **Superfície Elevada Serene (`#182026`):** Contraste calibrado para balões e campo de entrada.
+* **Verde-Sálvia Iluminado (`#8EB49B`):** Destaques primários com luminosidade suave para não agredir pupilas dilatadas.
+* **Texto Leve Anti-Fadiga (`#E2E8F0`):** Leitura cristalina sem agressão aos olhos.
+
 ### Componente de Respiração Guiada (Técnica 4-7-8)
 O componente `BreathingCircle` conduz visualmente o ritmo fisiológico:
-1. **Inspire (4s):** O círculo expande suavemente.
+1. **Inspire (4s):** O círculo expande suavemente com microvibrações táteis.
 2. **Segure (7s):** O círculo sustenta a expansão com um halo de brilho suave (*Glow*).
-3. **Expire (8s):** O círculo contrai lentamente, ajudando a desacelerar a frequência cardíaca.
+3. **Expire (8s):** O círculo contrai lentamente, auxiliando na redução da frequência cardíaca.
 
 ---
 
@@ -168,9 +176,15 @@ app/build/outputs/bundle/release/app-release.aab
 
 ## 📸 9. Demonstração Visual do Aplicativo
 
+### Modo Diurno (Paleta Calmante)
 | 1. Acolhimento Imediato (Fricção Zero) | 2. Círculo de Respiração 4-7-8 | 3. Diálogo e Voz (TTS/STT) |
 | :---: | :---: | :---: |
-| <img src="docs/screenshots/screen_home.png" width="240" alt="Tela Inicial de Acolhimento" /> | <img src="docs/screenshots/screen_breathing.png" width="240" alt="Círculo de Respiração Guiada" /> | <img src="docs/screenshots/screen_chat.png" width="240" alt="Chat e Streaming de IA" /> |
+| <img src="docs/screenshots/screen_home.png" width="230" alt="Tela Inicial de Acolhimento" /> | <img src="docs/screenshots/screen_breathing.png" width="230" alt="Círculo de Respiração Guiada" /> | <img src="docs/screenshots/screen_chat.png" width="230" alt="Chat e Streaming de IA" /> |
+
+### Modo Noturno Acolhedor (Deep Slate para Crises Noturnas)
+| 1. Tela Inicial Noturna | 2. Respiração 4-7-8 Noturna | 3. Condução 5-4-3-2-1 Noturna |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/screen_dark.png" width="230" alt="Tela Inicial Noturna" /> | <img src="docs/screenshots/screen_dark_breathing.png" width="230" alt="Círculo 4-7-8 Noturno" /> | <img src="docs/screenshots/screen_dark_chat.png" width="230" alt="Chat Acolhedor Noturno" /> |
 
 ---
 
