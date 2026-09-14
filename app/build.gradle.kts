@@ -95,5 +95,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.google.generativeai)
 
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+
     debugImplementation(libs.androidx.ui.tooling)
 }
