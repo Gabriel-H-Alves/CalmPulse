@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,11 +26,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.VolumeMute
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -84,6 +89,8 @@ fun ChatScreen(
     var isSpeaking by remember { mutableStateOf(false) }
     var currentSpokenText by remember { mutableStateOf<String?>(null) }
 
+    var voiceErrorMessage by remember { mutableStateOf<String?>(null) }
+
     // 1. Inicializa o sintetizador de voz (TTS)
     val speaker = remember {
         VoiceSpeaker(context) { speaking ->
@@ -101,8 +108,19 @@ fun ChatScreen(
             },
             onListeningStateChanged = { listening ->
                 isListening = listening
+            },
+            onError = { errorText ->
+                voiceErrorMessage = errorText
             }
         )
+    }
+
+    // Auto-dismiss sereno de aviso de voz após 4.5 segundos
+    LaunchedEffect(voiceErrorMessage) {
+        if (voiceErrorMessage != null) {
+            kotlinx.coroutines.delay(4500)
+            voiceErrorMessage = null
+        }
     }
 
     // Libera recursos de áudio ao sair da tela
@@ -119,6 +137,8 @@ fun ChatScreen(
     ) { isGranted ->
         if (isGranted) {
             recognizer.startListening()
+        } else {
+            voiceErrorMessage = "O microfone está pausado. Você pode digitar com calma ou tentar novamente."
         }
     }
 
@@ -172,6 +192,20 @@ fun ChatScreen(
                             contentDescription = "Exercício de Respiração",
                             tint = if (showBreathingExercise) SageGreen else TextSecondary
                         )
+                    }
+
+                    // Botão para reiniciar o acolhimento (Novo Ciclo de Diálogo)
+                    if (uiState.messages.isNotEmpty()) {
+                        IconButton(onClick = {
+                            speaker.stop()
+                            viewModel.resetChat()
+                        }) {
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = "Reiniciar acolhimento",
+                                tint = TextSecondary
+                            )
+                        }
                     }
                 }
             )
@@ -268,6 +302,36 @@ fun ChatScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     BreathingCircle()
+                }
+            }
+
+            // Banner sereno de aviso de voz / microfone (Check-in de acessibilidade)
+            AnimatedVisibility(visible = voiceErrorMessage != null) {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = SoftLavender.copy(alpha = 0.45f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .clickable { voiceErrorMessage = null }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = SageGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = voiceErrorMessage ?: "",
+                            style = MaterialTheme.typography.bodySmall.copy(color = TextPrimary),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 

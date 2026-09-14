@@ -14,6 +14,7 @@ Em estados de estresse elevado ou princípio de pânico, o córtex pré-frontal 
 * **Respostas em Streaming Contínuo:** Redução da ansiedade de espera; a IA responde token a token via `Flow<String>`, sem silêncios de 5 a 10 segundos.
 * **Resiliência e Falha Graciosa:** Em caso de perda de conexão ou indisponibilidade, o app nunca exibe logs técnicos ("HTTP 500", "Timeout"), respondendo com a mensagem acolhedora:  
   > *"Estou aqui com você. Respire fundo devagar... já vamos continuar."*
+* **Feedback Tátil/Háptico Sensorial:** Guia o usuário na respiração mesmo com os olhos fechados através de micro-vibrações rítmicas para inspirar, reter e expirar.
 
 ---
 
@@ -26,8 +27,9 @@ O projeto foi construído seguindo os princípios de **Clean Architecture** e pa
 | **Linguagem & UI** | Kotlin + Jetpack Compose (Material 3) | Arquitetura reativa declarativa, animações de pulso para respiração e layout relaxante |
 | **Arquitetura Base** | MVVM + `StateFlow` | Desacoplamento estrito entre UI, lógica de apresentação e chamadas assíncronas |
 | **Concorrência & Fluxo** | Coroutines + Kotlin `Flow` | Streaming de tokens de IA sem bloqueio da `MainThread` |
-| **Inteligência Artificial** | Google Generative AI SDK (Gemini 1.5 Flash) | Geração de respostas empáticas guiadas por System Prompt estrito |
+| **Inteligência Artificial** | Google Generative AI SDK (Gemini 3.6 Flash) | Geração de respostas empáticas guiadas por System Prompt estrito com memória Multi-Turn |
 | **Voz (STT & TTS)** | `SpeechRecognizer` + `TextToSpeech` nativo | Entrada por voz acessível e síntese com cadência desacelerada (`0.85x` rate, `0.90x` pitch) |
+| **Sensorial & Háptico** | Android `Vibrator` / `VibrationEffect` | Micro-pulsos táteis suaves sincronizados às fases da técnica 4-7-8 |
 | **Empacotamento** | Gradle + Signing Config | Geração do bundle assinado otimizado (`.aab`) para Google Play |
 
 ---

@@ -52,15 +52,19 @@ fun BreathingCircle(
     modifier: Modifier = Modifier,
     isActive: Boolean = true
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val hapticHelper = remember { com.calmpulse.util.HapticFeedbackHelper(context) }
+
     var currentPhase by remember { mutableStateOf(BreathingPhase.INHALE) }
     var secondsRemaining by remember { mutableStateOf(currentPhase.durationSeconds) }
 
-    // Loop do ciclo 4-7-8 rítmico
+    // Loop do ciclo 4-7-8 rítmico com micro-vibrações táteis
     LaunchedEffect(isActive) {
         if (!isActive) return@LaunchedEffect
         while (true) {
             // Fase 1: Inspire (4s)
             currentPhase = BreathingPhase.INHALE
+            hapticHelper.vibrateInhale()
             for (sec in currentPhase.durationSeconds downTo 1) {
                 secondsRemaining = sec
                 delay(1000)
@@ -68,6 +72,7 @@ fun BreathingCircle(
 
             // Fase 2: Retenha (7s)
             currentPhase = BreathingPhase.HOLD
+            hapticHelper.vibrateHold()
             for (sec in currentPhase.durationSeconds downTo 1) {
                 secondsRemaining = sec
                 delay(1000)
@@ -75,6 +80,7 @@ fun BreathingCircle(
 
             // Fase 3: Expire (8s)
             currentPhase = BreathingPhase.EXHALE
+            hapticHelper.vibrateExhale()
             for (sec in currentPhase.durationSeconds downTo 1) {
                 secondsRemaining = sec
                 delay(1000)
