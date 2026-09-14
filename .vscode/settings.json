@@ -1,0 +1,36 @@
+{
+  "editor.inlineSuggest.enabled": false,
+  "editor.suggest.enabled": false,
+  "editor.inlineSuggest.suppressSuggestions": true,
+  "editor.inlineSuggest.edits.allowCodeShifting": "never",
+  "editor.inlineSuggest.edits.renderSideBySide": "never",
+  "editor.inlineSuggest.edits.showLongDistanceHint": false,
+  "editor.inlineSuggest.experimental.emptyResponseInformation": false,
+  "editor.quickSuggestions": {
+    "other": "off",
+    "comments": "off",
+    "strings": "off"
+  },
+  "editor.suggestOnTriggerCharacters": false,
+  "editor.snippetSuggestions": "none",
+  "editor.wordBasedSuggestions": "off",
+  "editor.parameterHints.enabled": false,
+  "editor.tabCompletion": "off",
+  "editor.acceptSuggestionOnEnter": "off",
+  "editor.suggest.selectionMode": "never",
+  "editor.suggest.showWords": false,
+  "editor.suggest.showSnippets": false,
+  "github.copilot.enable": {
+    "*": false
+  },
+  "[kotlin]": {
+    "editor.quickSuggestions": {
+      "other": "off",
+      "comments": "off",
+      "strings": "off"
+    },
+    "editor.suggestOnTriggerCharacters": false,
+    "editor.inlineSuggest.enabled": false,
+    "editor.suggest.enabled": false
+  }
+}
