@@ -125,7 +125,32 @@ A chave da API **não fica hardcoded no repositório**. Ela é carregada em temp
 
 ---
 
-## 📦 7. Geração do Pacote de Produção (.AAB Assinado)
+## 🧪 7. Testes Automatizados (Unit Tests)
+
+O projeto conta com suíte completa de testes unitários isolados executando em JVM pura via `kotlinx-coroutines-test` e `JUnit 4`, sem acoplamento a serviços externos:
+
+* **`ChatViewModelTest` (6 testes):**
+  * Estado inicial e imutabilidade de fluxo.
+  * Atualização dinâmica de input de texto.
+  * Envio de mensagem, streaming progressivo de IA e limpeza de campo.
+  * Validação contra envio de mensagens vazias ou espaços em branco.
+  * Reset do acolhimento (limpeza do histórico e encerramento de sessão).
+  * Fallback gracioso resiliente a falhas de rede.
+* **`BreathingPhaseTest` (3 testes):**
+  * Temporização e proporções exatas do ciclo 4-7-8 (19s no total).
+  * Fatores de escala física da animação de expansão e relaxamento.
+  * Integridade dos textos de ancoragem de cada fase.
+* **`SystemPromptTest` (1 teste):**
+  * Garantia de conformidade das regras clínicas de acolhimento (respostas curtas, não-diagnóstico, passo a passo e protocolos).
+
+### Executar a Suíte de Testes:
+```bash
+./gradlew testDebugUnitTest
+```
+
+---
+
+## 📦 8. Geração do Pacote de Produção (.AAB Assinado)
 
 O projeto possui keystore de release já configurada no bloco `signingConfigs` do `app/build.gradle.kts`.
 
@@ -141,7 +166,7 @@ app/build/outputs/bundle/release/app-release.aab
 
 ---
 
-## 📸 8. Demonstração Visual do Aplicativo
+## 📸 9. Demonstração Visual do Aplicativo
 
 | 1. Acolhimento Imediato (Fricção Zero) | 2. Círculo de Respiração 4-7-8 | 3. Diálogo e Voz (TTS/STT) |
 | :---: | :---: | :---: |
@@ -149,7 +174,7 @@ app/build/outputs/bundle/release/app-release.aab
 
 ---
 
-## 📋 9. Rubrica de Avaliação & Critérios Atendidos
+## 📋 10. Rubrica de Avaliação & Critérios Atendidos
 
 | Critério | Peso | Status | Implementação |
 | :--- | :---: | :---: | :--- |
