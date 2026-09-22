@@ -156,7 +156,7 @@ O projeto conta com suíte completa de testes unitários isolados executando em 
 ./gradlew testDebugUnitTest
 ```
 
----
+----
 
 ## 📦 8. Geração do Pacote de Produção (.AAB Assinado)
 
