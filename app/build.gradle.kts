@@ -34,19 +34,36 @@ android {
         buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
     }
 
+    val keystoreFilePath = System.getenv("KEYSTORE_FILE") 
+        ?: localProperties.getProperty("KEYSTORE_FILE") 
+        ?: "calmpulse-release.jks"
+    val releaseStoreFile = file(keystoreFilePath)
+    val releaseStorePassword = System.getenv("KEYSTORE_PASSWORD") 
+        ?: localProperties.getProperty("KEYSTORE_PASSWORD") ?: ""
+    val releaseKeyAlias = System.getenv("KEY_ALIAS") 
+        ?: localProperties.getProperty("KEY_ALIAS") ?: ""
+    val releaseKeyPassword = System.getenv("KEY_PASSWORD") 
+        ?: localProperties.getProperty("KEY_PASSWORD") ?: ""
+
     signingConfigs {
         create("release") {
-            storeFile = file("calmpulse-release.jks")
-            storePassword = "calmpulse123"
-            keyAlias = "calmpulse"
-            keyPassword = "calmpulse123"
+            if (releaseStoreFile.exists() && releaseStorePassword.isNotBlank()) {
+                storeFile = releaseStoreFile
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
         }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            val releaseConfig = signingConfigs.getByName("release")
+            if (releaseConfig.storeFile != null && releaseConfig.storeFile!!.exists()) {
+                signingConfig = releaseConfig
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

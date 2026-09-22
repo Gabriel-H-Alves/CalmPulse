@@ -21,10 +21,10 @@ class BreathingPhaseTest {
     }
 
     @Test
-    fun `target scales should expand on inhale and return to baseline on exhale`() {
+    fun `target scales should expand on inhale and contract on exhale`() {
         assertTrue(BreathingPhase.INHALE.targetScale > 1.0f)
         assertEquals(BreathingPhase.INHALE.targetScale, BreathingPhase.HOLD.targetScale)
-        assertEquals(1.0f, BreathingPhase.EXHALE.targetScale, 0.001f)
+        assertEquals(0.88f, BreathingPhase.EXHALE.targetScale, 0.001f)
     }
 
     @Test
