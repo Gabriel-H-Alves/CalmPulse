@@ -46,8 +46,10 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SelfImprovement
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Card
@@ -96,6 +98,8 @@ import com.calmpulse.audio.VoiceSpeaker
 import com.calmpulse.data.model.MessageSender
 import com.calmpulse.ui.components.BreathingCircle
 import com.calmpulse.ui.components.ChatBubble
+import com.calmpulse.ui.components.GeneralSettingsSheet
+import com.calmpulse.ui.components.InterfaceSettingsSheet
 import com.calmpulse.ui.components.MetaAiRing
 import com.calmpulse.ui.components.QuickPromptChips
 import com.calmpulse.ui.theme.DarkBackground
@@ -124,7 +128,8 @@ enum class CalmPulseTab {
 fun ChatScreen(
     viewModel: ChatViewModel = viewModel(),
     isDarkTheme: Boolean = false,
-    onToggleTheme: () -> Unit = {}
+    onToggleTheme: () -> Unit = {},
+    onCheckUpdate: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -138,6 +143,8 @@ fun ChatScreen(
 
     var showMenu by remember { mutableStateOf(false) }
     var showActionSheet by remember { mutableStateOf(false) }
+    var showInterfaceSettings by remember { mutableStateOf(false) }
+    var showGeneralSettings by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
 
     val isDark = MaterialTheme.colorScheme.background == DarkBackground
@@ -324,14 +331,6 @@ fun ChatScreen(
                         )
                     }
 
-                    IconButton(onClick = onToggleTheme) {
-                        Icon(
-                            imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                            contentDescription = if (isDarkTheme) "Modo Claro" else "Modo Escuro",
-                            tint = secondaryText
-                        )
-                    }
-
                     Box {
                         IconButton(onClick = { showMenu = !showMenu }) {
                             Icon(
@@ -346,38 +345,23 @@ fun ChatScreen(
                             onDismissRequest = { showMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Praticar Respiração 4-7-8") },
+                                text = { Text("Configurações de Interface") },
                                 onClick = {
                                     showMenu = false
-                                    selectedTab = CalmPulseTab.BREATHING
+                                    showInterfaceSettings = true
                                 },
                                 leadingIcon = {
-                                    Icon(Icons.Default.Spa, contentDescription = null, tint = WhatsAppGreen)
+                                    Icon(Icons.Default.Palette, contentDescription = null, tint = WhatsAppGreen)
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Ligue 188 (CVV Apoio)") },
+                                text = { Text("Configurações Gerais") },
                                 onClick = {
                                     showMenu = false
-                                    val callIntent = Intent(Intent.ACTION_DIAL).apply {
-                                        data = Uri.parse("tel:188")
-                                    }
-                                    context.startActivity(callIntent)
+                                    showGeneralSettings = true
                                 },
                                 leadingIcon = {
-                                    Icon(Icons.Default.Call, contentDescription = null, tint = Color(0xFFE53935))
-                                }
-                            )
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text("Reiniciar Conversa") },
-                                onClick = {
-                                    showMenu = false
-                                    speaker.stop()
-                                    viewModel.resetChat()
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Refresh, contentDescription = null)
+                                    Icon(Icons.Default.Settings, contentDescription = null, tint = secondaryText)
                                 }
                             )
                         }
@@ -925,6 +909,28 @@ fun ChatScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                 }
             }
+        }
+
+        // Modal Bottom Sheet: Configurações de Interface
+        if (showInterfaceSettings) {
+            InterfaceSettingsSheet(
+                isDarkTheme = isDarkTheme,
+                onToggleTheme = onToggleTheme,
+                onDismiss = { showInterfaceSettings = false }
+            )
+        }
+
+        // Modal Bottom Sheet: Configurações Gerais
+        if (showGeneralSettings) {
+            GeneralSettingsSheet(
+                isDarkTheme = isDarkTheme,
+                onResetChat = {
+                    speaker.stop()
+                    viewModel.resetChat()
+                },
+                onCheckUpdate = onCheckUpdate,
+                onDismiss = { showGeneralSettings = false }
+            )
         }
     }
 }

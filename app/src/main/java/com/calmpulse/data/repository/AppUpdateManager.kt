@@ -150,7 +150,6 @@ class AppUpdateManager(private val context: Context) {
                 return@flow
             }
 
-            val totalBytes = responseBody.contentLength()
             val updatesDir = File(context.externalCacheDir, "updates")
             if (!updatesDir.exists()) updatesDir.mkdirs()
 

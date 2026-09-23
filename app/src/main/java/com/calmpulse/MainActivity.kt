@@ -48,7 +48,20 @@ class MainActivity : ComponentActivity() {
             CalmPulseTheme(darkTheme = isDarkTheme) {
                 ChatScreen(
                     isDarkTheme = isDarkTheme,
-                    onToggleTheme = { isDarkTheme = !isDarkTheme }
+                    onToggleTheme = { isDarkTheme = !isDarkTheme },
+                    onCheckUpdate = {
+                        scope.launch {
+                            Toast.makeText(this@MainActivity, "Buscando atualizações...", Toast.LENGTH_SHORT).show()
+                            val update = updateManager.checkForUpdate()
+                            if (update != null) {
+                                currentUpdateInfo = update
+                                updateDialogState = UpdateDialogState.Available(update)
+                                showUpdateDialog = true
+                            } else {
+                                Toast.makeText(this@MainActivity, "Você já está na versão mais recente!", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
                 )
 
                 // Dialog de atualização
