@@ -107,7 +107,11 @@ class GeminiChatRepository(
                     chat.sendMessageStream(sanitized)
                         .mapNotNull { it.text }
                         .collect { token ->
-                            streamedAnyToken = true
+                            if (!streamedAnyToken) {
+                                // Pacing terapêutico: micro-pausa de escuta ativa antes da primeira palavra
+                                delay(600)
+                                streamedAnyToken = true
+                            }
                             emit(token)
                         }
 

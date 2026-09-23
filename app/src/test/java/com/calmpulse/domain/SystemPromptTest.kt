@@ -27,5 +27,14 @@ class SystemPromptTest {
 
         // Regra 5: Respiração 4-7-8
         assertTrue("Prompt deve conter a respiração 4-7-8", prompt.contains("4-7-8"))
+
+        // Regra 6: Acolhimento antes de prescrição
+        assertTrue("Prompt deve exigir acolhimento antes de exercícios", prompt.contains("Acolhimento Antes da Prescrição"))
+
+        // Regra 7: Detecção de perfis psicológicos
+        assertTrue("Prompt deve contemplar adaptação de perfis", prompt.contains("Detecção e Adaptação de Perfil"))
+
+        // Regra 8: Regras anti-robô (proibição de bullet points e exclamações)
+        assertTrue("Prompt deve proibir bullet points mecânicos", prompt.contains("bullet points"))
     }
 }

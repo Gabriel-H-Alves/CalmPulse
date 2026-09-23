@@ -29,7 +29,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -68,6 +70,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -392,6 +395,48 @@ fun ChatScreen(
             Column {
                 // Barra de Entrada WhatsApp iOS 2025 Ultra Clean
                 if (selectedTab == CalmPulseTab.CHAT) {
+                    // Chips Rápidos de Apoio Emocional (Cognitive Offloading para momentos de crise)
+                    if (!uiState.isStreaming) {
+                        val quickChips = listOf(
+                            "🌊 Me ajuda a respirar",
+                            "💭 Só quero desabafar",
+                            "⚡ Ansiedade muito forte",
+                            "🛑 Não sei o que fazer",
+                            "🛋️ Exercício de aterramento"
+                        )
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(inputBarBg)
+                                .padding(horizontal = 8.dp, vertical = 5.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            items(quickChips) { chipText ->
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = if (isDark) Color(0xFF202C33) else Color(0xFFF0F2F5),
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (isDark) Color(0xFF2A3942) else Color(0xFFE2E8F0)
+                                    ),
+                                    modifier = Modifier.clickable {
+                                        viewModel.sendMessage(chipText)
+                                    }
+                                ) {
+                                    Text(
+                                        text = chipText,
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            color = primaryText,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium
+                                        ),
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
