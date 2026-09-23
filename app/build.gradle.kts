@@ -22,8 +22,8 @@ android {
         applicationId = "com.calmpulse"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.3.0"
+        versionCode = 5
+        versionName = "1.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -36,7 +36,7 @@ android {
 
     val keystoreFilePath = System.getenv("KEYSTORE_FILE") 
         ?: localProperties.getProperty("KEYSTORE_FILE") 
-        ?: "calmpulse-release.jks"
+        ?: "calmpulse-production.jks"
     val releaseStoreFile = file(keystoreFilePath)
     val releaseStorePassword = System.getenv("KEYSTORE_PASSWORD") 
         ?: localProperties.getProperty("KEYSTORE_PASSWORD") ?: ""

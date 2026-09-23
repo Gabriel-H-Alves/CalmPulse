@@ -13,5 +13,7 @@ data class UpdateInfo(
     /** URL direta de download do APK */
     val downloadUrl: String,
     /** Notas da release (changelog) */
-    val releaseNotes: String
+    val releaseNotes: String,
+    /** Hash criptográfico SHA-256 esperado para validação de integridade */
+    val expectedSha256: String? = null
 )

@@ -14,11 +14,15 @@
 -keepattributes *Annotation*, InnerClasses, EnclosingMethod
 -dontwarn kotlinx.coroutines.**
 
-# 4. Remover chamadas de Log e debug em build de produção
+# 4. Remover COMPLETAMENTE chamadas de Log em build de produção (Prevenção de vazamento SEC-005)
 -assumenosideeffects class android.util.Log {
     public static boolean isLoggable(java.lang.String, int);
     public static int v(...);
     public static int d(...);
+    public static int i(...);
+    public static int w(...);
+    public static int e(...);
+    public static int println(...);
 }
 
 # 5. Preservar OkHttp e Okio para o Auto-Updater

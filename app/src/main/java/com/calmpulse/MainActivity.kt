@@ -88,7 +88,7 @@ class MainActivity : ComponentActivity() {
                             currentUpdateInfo?.let { info ->
                                 updateDialogState = UpdateDialogState.Downloading(0)
                                 scope.launch {
-                                    updateManager.downloadApk(info.downloadUrl).collect { state ->
+                                    updateManager.downloadApk(info.downloadUrl, info.expectedSha256).collect { state ->
                                         when (state) {
                                             is AppUpdateManager.DownloadState.Downloading -> {
                                                 updateDialogState =

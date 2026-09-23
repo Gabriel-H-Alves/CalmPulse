@@ -1,0 +1,25 @@
+version: 2
+updates:
+  # Monitoramento semanal de dependências do ecossistema Gradle / Android
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Sao_Paulo"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "security"
+    reviewers:
+      - "Gabriel-H-Alves"
+
+  # Monitoramento de dependências e actions de CI/CD do GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "ci/cd"
+      - "security"

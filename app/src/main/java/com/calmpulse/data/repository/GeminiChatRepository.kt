@@ -116,7 +116,7 @@ class GeminiChatRepository(
 
                 } catch (e: Exception) {
                     lastException = e
-                    Log.w(TAG, "Falha no modelo $candidate (tentativa $attempt/$MAX_RETRIES_PER_MODEL): ${e.message}")
+                    Log.w(TAG, "Falha no modelo $candidate (tentativa $attempt/$MAX_RETRIES_PER_MODEL): ${e.javaClass.simpleName}")
 
                     // Se já começou a emitir tokens para o usuário, não devemos trocar no meio
                     if (streamedAnyToken) {
@@ -137,7 +137,7 @@ class GeminiChatRepository(
         }
 
         // Se todos os modelos falharam
-        Log.e(TAG, "Todos os modelos da cascata falharam. Último erro: ${lastException?.message}")
+        Log.e(TAG, "Todos os modelos da cascata falharam. Tipo de erro: ${lastException?.javaClass?.simpleName}")
         emit("Estou aqui com você. Houve uma oscilação momentânea de conexão, mas sigo ao seu lado. Respire fundo e me diga como posso te ajudar agora.")
 
     }.flowOn(Dispatchers.IO)

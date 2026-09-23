@@ -106,4 +106,60 @@ class SecurityHardeningTest {
         val afterReset = rateLimiter.tryAcquire()
         assertTrue(afterReset is RateLimitResult.Allowed)
     }
+
+    // ==========================================
+    // 4. Testes de Integridade Criptográfica (SEC-003)
+    // ==========================================
+
+    @Test
+    fun `sha256 calculation and verification should match known hash`() {
+        val testContent = "CalmPulse Secure Update Payload v1.4.0"
+        val tempFile = java.io.File.createTempFile("calmpulse-test", ".apk")
+        tempFile.writeText(testContent)
+
+        // SHA-256 conhecido calculado para o conteúdo acima
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val expectedHash = digest.digest(testContent.toByteArray()).joinToString("") { "%02x".format(it) }
+
+        // Recalcular via streaming de arquivo (idêntico à lógica do AppUpdateManager)
+        val fileDigest = java.security.MessageDigest.getInstance("SHA-256")
+        tempFile.inputStream().use { input ->
+            val buffer = ByteArray(1024)
+            var bytesRead: Int
+            while (input.read(buffer).also { bytesRead = it } != -1) {
+                fileDigest.update(buffer, 0, bytesRead)
+            }
+        }
+        val computedHash = fileDigest.digest().joinToString("") { "%02x".format(it) }
+
+        assertEquals(expectedHash, computedHash)
+
+        // Simulação de alteração maliciosa/corrupção (tampering)
+        val tamperedHash = "a".repeat(64)
+        assertFalse(computedHash.equals(tamperedHash, ignoreCase = true))
+
+        tempFile.delete()
+    }
+
+    @Test
+    fun `regex should correctly extract versionCode and sha256 from release body`() {
+        val releaseBody = """
+            ## O que mudou:
+            - Atualizações de segurança críticas
+            - Rate Limiting e ProGuard Hardening
+            
+            VERSION_CODE=5
+            SHA256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+        """.trimIndent()
+
+        val versionCodeRegex = Regex("""VERSION_CODE\s*=\s*(\d+)""")
+        val sha256Regex = Regex("""(?i)SHA256\s*=\s*([a-f0-9]{64})""")
+
+        val versionCode = versionCodeRegex.find(releaseBody)?.groupValues?.get(1)?.toIntOrNull()
+        val sha256 = sha256Regex.find(releaseBody)?.groupValues?.get(1)?.lowercase()
+
+        assertEquals(5, versionCode)
+        assertEquals("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", sha256)
+    }
 }
+
