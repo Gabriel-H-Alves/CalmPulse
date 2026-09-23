@@ -21,6 +21,12 @@
     public static int d(...);
 }
 
-# 5. Otimizações de Bytecode
+# 5. Preservar OkHttp e Okio para o Auto-Updater
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-keep class okhttp3.** { *; }
+
+# 6. Otimizações de Bytecode
 -repackageclasses ''
 -allowaccessmodification
+

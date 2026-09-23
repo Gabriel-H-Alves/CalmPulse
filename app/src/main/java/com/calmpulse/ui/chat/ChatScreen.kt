@@ -52,6 +52,7 @@ import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -68,6 +69,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
@@ -145,6 +147,7 @@ fun ChatScreen(
     var showActionSheet by remember { mutableStateOf(false) }
     var showInterfaceSettings by remember { mutableStateOf(false) }
     var showGeneralSettings by remember { mutableStateOf(false) }
+    var showResetConfirmDialog by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
 
     val isDark = MaterialTheme.colorScheme.background == DarkBackground
@@ -181,11 +184,18 @@ fun ChatScreen(
         )
     }
 
-    // Auto-dismiss do aviso de voz
+    // Auto-dismiss do aviso de voz e de feedback
     LaunchedEffect(voiceErrorMessage) {
         if (voiceErrorMessage != null) {
             kotlinx.coroutines.delay(4500)
             voiceErrorMessage = null
+        }
+    }
+
+    LaunchedEffect(uiState.userFeedbackMessage) {
+        if (uiState.userFeedbackMessage != null) {
+            kotlinx.coroutines.delay(4500)
+            viewModel.clearFeedbackMessage()
         }
     }
 
@@ -206,10 +216,16 @@ fun ChatScreen(
         }
     }
 
-    // Auto-scroll para última mensagem
-    LaunchedEffect(uiState.messages.size, uiState.messages.lastOrNull()?.text) {
+    // Auto-scroll otimizado: anima apenas na nova mensagem e faz scroll direto no streaming
+    LaunchedEffect(uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
             listState.animateScrollToItem(uiState.messages.lastIndex)
+        }
+    }
+
+    LaunchedEffect(uiState.isStreaming) {
+        if (uiState.isStreaming && uiState.messages.isNotEmpty()) {
+            listState.scrollToItem(uiState.messages.lastIndex)
         }
     }
 
@@ -505,8 +521,9 @@ fun ChatScreen(
             when (selectedTab) {
                 CalmPulseTab.CHAT -> {
                     Column(modifier = Modifier.fillMaxSize()) {
-                        // Banner sereno de aviso de microfone
-                        AnimatedVisibility(visible = voiceErrorMessage != null) {
+                        // Banner sereno de aviso do sistema (Microfone ou Rate Limit)
+                        val activeBanner = voiceErrorMessage ?: uiState.userFeedbackMessage
+                        AnimatedVisibility(visible = activeBanner != null) {
                             Card(
                                 shape = RoundedCornerShape(12.dp),
                                 colors = CardDefaults.cardColors(
@@ -515,7 +532,10 @@ fun ChatScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 12.dp, vertical = 6.dp)
-                                    .clickable { voiceErrorMessage = null }
+                                    .clickable {
+                                        voiceErrorMessage = null
+                                        viewModel.clearFeedbackMessage()
+                                    }
                             ) {
                                 Row(
                                     modifier = Modifier.padding(10.dp),
@@ -529,7 +549,7 @@ fun ChatScreen(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = voiceErrorMessage ?: "",
+                                        text = activeBanner ?: "",
                                         style = MaterialTheme.typography.bodySmall.copy(color = primaryText),
                                         modifier = Modifier.weight(1f)
                                     )
@@ -877,8 +897,7 @@ fun ChatScreen(
                             .clip(RoundedCornerShape(12.dp))
                             .clickable {
                                 showActionSheet = false
-                                speaker.stop()
-                                viewModel.resetChat()
+                                showResetConfirmDialog = true
                             }
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -925,11 +944,42 @@ fun ChatScreen(
             GeneralSettingsSheet(
                 isDarkTheme = isDarkTheme,
                 onResetChat = {
-                    speaker.stop()
-                    viewModel.resetChat()
+                    showGeneralSettings = false
+                    showResetConfirmDialog = true
                 },
                 onCheckUpdate = onCheckUpdate,
                 onDismiss = { showGeneralSettings = false }
+            )
+        }
+
+        // Diálogo de confirmação para reiniciar conversa (Prevenção de perda acidental)
+        if (showResetConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showResetConfirmDialog = false },
+                title = {
+                    Text("Reiniciar Conversa?", fontWeight = FontWeight.Bold)
+                },
+                text = {
+                    Text("Tem certeza que deseja apagar o histórico atual? Um novo acolhimento tranquilo será iniciado.")
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showResetConfirmDialog = false
+                            speaker.stop()
+                            viewModel.resetChat()
+                        }
+                    ) {
+                        Text("Reiniciar", color = Color(0xFFE53935), fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showResetConfirmDialog = false }
+                    ) {
+                        Text("Cancelar")
+                    }
+                }
             )
         }
     }

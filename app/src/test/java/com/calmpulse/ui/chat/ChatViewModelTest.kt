@@ -152,4 +152,24 @@ class ChatViewModelTest {
         val aiMsg = state.messages[1]
         assertEquals("Estou aqui com você. Respire fundo devagar... já vamos continuar.", aiMsg.text)
     }
+
+    @Test
+    fun `RateLimitException should set userFeedbackMessage and not add fake AI message`() = runTest(testDispatcher) {
+        val rateLimitRepo = object : ChatRepository {
+            override fun sendMessageStream(userPrompt: String): Flow<String> = flow {
+                throw com.calmpulse.security.RateLimitException("Aguarde um instante.", 1000L)
+            }
+            override fun resetChat() {}
+        }
+        val viewModel = ChatViewModel(rateLimitRepo)
+
+        viewModel.sendMessage("Mensagem rápida")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("Aguarde um instante.", state.userFeedbackMessage)
+        assertEquals(1, state.messages.size)
+        assertEquals("Mensagem rápida", state.messages[0].text)
+    }
 }
+

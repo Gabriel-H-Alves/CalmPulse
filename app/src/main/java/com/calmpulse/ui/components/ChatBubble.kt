@@ -20,9 +20,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import android.widget.Toast
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeMute
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +36,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,6 +72,18 @@ fun ChatBubble(
 ) {
     val isUser = message.sender == MessageSender.USER
     val isDark = MaterialTheme.colorScheme.background == DarkBackground
+
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+    val haptic = LocalHapticFeedback.current
+
+    val copyAction = {
+        if (message.text.isNotBlank()) {
+            clipboardManager.setText(AnnotatedString(message.text))
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            Toast.makeText(context, "Mensagem copiada!", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // Cores de fundo dos balões WhatsApp iOS 2025
     val bubbleColor = if (isUser) {
@@ -176,6 +195,19 @@ fun ChatBubble(
                     modifier = Modifier.align(Alignment.End),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Botão Copiar Texto para respostas da IA
+                    if (!isUser && message.text.isNotBlank() && !message.isStreaming) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = "Copiar mensagem",
+                            tint = timeColor.copy(alpha = 0.75f),
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clickable { copyAction() }
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+
                     // Botão de Áudio (TTS) para respostas da IA
                     if (!isUser && message.text.isNotBlank() && !message.isStreaming) {
                         Icon(

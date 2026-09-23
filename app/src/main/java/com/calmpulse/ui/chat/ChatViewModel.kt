@@ -6,16 +6,19 @@ import com.calmpulse.data.model.ChatMessage
 import com.calmpulse.data.model.MessageSender
 import com.calmpulse.data.repository.GeminiChatRepository
 import com.calmpulse.domain.repository.ChatRepository
+import com.calmpulse.security.RateLimitException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class ChatUiState(
     val messages: List<ChatMessage> = emptyList(),
     val isStreaming: Boolean = false,
-    val inputText: String = ""
+    val inputText: String = "",
+    val userFeedbackMessage: String? = null
 )
 
 class ChatViewModel(
@@ -27,6 +30,10 @@ class ChatViewModel(
 
     fun onInputTextChanged(newText: String) {
         _uiState.update { it.copy(inputText = newText) }
+    }
+
+    fun clearFeedbackMessage() {
+        _uiState.update { it.copy(userFeedbackMessage = null) }
     }
 
     fun sendMessage(userText: String = _uiState.value.inputText) {
@@ -51,35 +58,64 @@ class ChatViewModel(
             state.copy(
                 messages = state.messages + userMessage + aiMessage,
                 inputText = "",
-                isStreaming = true
+                isStreaming = true,
+                userFeedbackMessage = null
             )
         }
 
         // 4. Inicia a coleta do streaming na Coroutine do ViewModel
         viewModelScope.launch {
-            repository.sendMessageStream(trimmed).collect { token ->
-                // A cada token emitido pela IA, atualizamos o texto da última mensagem!
+            try {
+                repository.sendMessageStream(trimmed)
+                    .catch { error ->
+                        if (error is RateLimitException) {
+                            // Remove a mensagem de IA vazia e mostra o feedback suave
+                            _uiState.update { state ->
+                                val listWithoutEmptyAi = state.messages.filterNot { it.id == aiMessage.id }
+                                state.copy(
+                                    messages = listWithoutEmptyAi,
+                                    isStreaming = false,
+                                    userFeedbackMessage = error.reason
+                                )
+                            }
+                        } else {
+                            // Se for outro erro, exibe acolhimento seguro
+                            _uiState.update { state ->
+                                val updatedMessages = state.messages.toMutableList()
+                                val lastIndex = updatedMessages.lastIndex
+                                if (lastIndex >= 0 && updatedMessages[lastIndex].sender == MessageSender.AI) {
+                                    updatedMessages[lastIndex] = updatedMessages[lastIndex].copy(
+                                        text = "Estou aqui com você. Respire fundo devagar... já vamos continuar.",
+                                        isStreaming = false
+                                    )
+                                }
+                                state.copy(messages = updatedMessages, isStreaming = false)
+                            }
+                        }
+                    }
+                    .collect { token ->
+                        _uiState.update { state ->
+                            val updatedMessages = state.messages.toMutableList()
+                            val lastIndex = updatedMessages.lastIndex
+                            if (lastIndex >= 0 && updatedMessages[lastIndex].sender == MessageSender.AI) {
+                                val currentAiMessage = updatedMessages[lastIndex]
+                                updatedMessages[lastIndex] = currentAiMessage.copy(
+                                    text = currentAiMessage.text + token
+                                )
+                            }
+                            state.copy(messages = updatedMessages)
+                        }
+                    }
+            } finally {
+                // 5. Garante que o streaming seja finalizado
                 _uiState.update { state ->
                     val updatedMessages = state.messages.toMutableList()
                     val lastIndex = updatedMessages.lastIndex
-                    if (lastIndex >= 0 && updatedMessages[lastIndex].sender == MessageSender.AI) {
-                        val currentAiMessage = updatedMessages[lastIndex]
-                        updatedMessages[lastIndex] = currentAiMessage.copy(
-                            text = currentAiMessage.text + token
-                        )
+                    if (lastIndex >= 0 && updatedMessages[lastIndex].id == aiMessage.id) {
+                        updatedMessages[lastIndex] = updatedMessages[lastIndex].copy(isStreaming = false)
                     }
-                    state.copy(messages = updatedMessages)
+                    state.copy(messages = updatedMessages, isStreaming = false)
                 }
-            }
-
-            // 5. Quando o streaming termina, marcamos isStreaming = false
-            _uiState.update { state ->
-                val updatedMessages = state.messages.toMutableList()
-                val lastIndex = updatedMessages.lastIndex
-                if (lastIndex >= 0) {
-                    updatedMessages[lastIndex] = updatedMessages[lastIndex].copy(isStreaming = false)
-                }
-                state.copy(messages = updatedMessages, isStreaming = false)
             }
         }
     }

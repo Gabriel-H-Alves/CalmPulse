@@ -1,5 +1,6 @@
 package com.calmpulse
 
+import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -24,8 +25,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            val context = this@MainActivity
+            val prefs = remember { context.getSharedPreferences("calmpulse_prefs", Context.MODE_PRIVATE) }
             val systemInDark = isSystemInDarkTheme()
-            var isDarkTheme by remember { mutableStateOf(systemInDark) }
+            var isDarkTheme by remember {
+                mutableStateOf(prefs.getBoolean("dark_mode_enabled", systemInDark))
+            }
+
+            val toggleTheme = {
+                val newMode = !isDarkTheme
+                isDarkTheme = newMode
+                prefs.edit().putBoolean("dark_mode_enabled", newMode).apply()
+            }
 
             // ── Auto-Update State ──
             val updateManager = remember { AppUpdateManager(this@MainActivity) }
@@ -48,7 +59,7 @@ class MainActivity : ComponentActivity() {
             CalmPulseTheme(darkTheme = isDarkTheme) {
                 ChatScreen(
                     isDarkTheme = isDarkTheme,
-                    onToggleTheme = { isDarkTheme = !isDarkTheme },
+                    onToggleTheme = toggleTheme,
                     onCheckUpdate = {
                         scope.launch {
                             Toast.makeText(this@MainActivity, "Buscando atualizações...", Toast.LENGTH_SHORT).show()

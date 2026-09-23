@@ -40,6 +40,8 @@ class VoiceSpeaker(
                 onSpeakingStateChanged(false)
             }
 
+            @Deprecated("Deprecated in Java")
+            @Suppress("DEPRECATION")
             override fun onError(utteranceId: String?) {
                 onSpeakingStateChanged(false)
             }
