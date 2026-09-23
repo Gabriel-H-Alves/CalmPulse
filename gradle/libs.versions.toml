@@ -8,7 +8,7 @@ composeBom = "2024.06.00"
 materialIconsExtended = "1.6.8"
 coroutines = "1.8.1"
 generativeai = "0.9.0"
-okhttp = "4.12.0"
+okhttp = "5.5.0"
 junit = "4.13.2"
 
 [libraries]
