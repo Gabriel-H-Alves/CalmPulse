@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Permite o FileProvider compartilhar APKs do diretório de cache externo -->
+    <external-cache-path
+        name="apk_updates"
+        path="updates/" />
+</paths>

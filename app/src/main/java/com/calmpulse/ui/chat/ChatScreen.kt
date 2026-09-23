@@ -206,16 +206,7 @@ fun ChatScreen(
         }
     }
 
-    // Auto-fala da resposta da IA ao concluir streaming
-    LaunchedEffect(uiState.isStreaming) {
-        if (!uiState.isStreaming && uiState.messages.isNotEmpty()) {
-            val lastMessage = uiState.messages.last()
-            if (lastMessage.sender == MessageSender.AI && lastMessage.text.isNotBlank()) {
-                currentSpokenText = lastMessage.text
-                speaker.speak(lastMessage.text)
-            }
-        }
-    }
+    // O áudio é reproduzido sob demanda pelo usuário ao tocar no botão de som da mensagem
 
     // Animação de pulso do botão de microfone enquanto escuta
     val micPulseTransition = rememberInfiniteTransition(label = "micPulse")

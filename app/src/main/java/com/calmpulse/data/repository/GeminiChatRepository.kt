@@ -1,5 +1,6 @@
 package com.calmpulse.data.repository
 
+import android.util.Log
 import com.calmpulse.BuildConfig
 import com.calmpulse.domain.prompt.SystemPrompt
 import com.calmpulse.domain.repository.ChatRepository
@@ -19,10 +20,15 @@ class GeminiChatRepository(
     private val rateLimiter: ClientRateLimiter = ClientRateLimiter()
 ) : ChatRepository {
 
-    // 1. Inicializamos o modelo do Gemini oficial com o System Prompt
-    private val generativeModel by lazy {
-        GenerativeModel(
-            modelName = "gemini-1.5-flash",
+    companion object {
+        private const val TAG = "GeminiChatRepo"
+        private const val PRIMARY_MODEL = "gemini-3.6-flash"
+        private const val FALLBACK_MODEL = "gemini-3.5-flash-lite"
+    }
+
+    private fun createGenerativeModel(modelName: String): GenerativeModel {
+        return GenerativeModel(
+            modelName = modelName,
             apiKey = BuildConfig.GEMINI_API_KEY,
             systemInstruction = com.google.ai.client.generativeai.type.content {
                 text(SystemPrompt.CALM_PULSE_INSTRUCTION)
@@ -30,50 +36,64 @@ class GeminiChatRepository(
         )
     }
 
-    // 2. Mantém a sessão de diálogo multi-turn na memória
+    private val primaryModel by lazy { createGenerativeModel(PRIMARY_MODEL) }
+    private val fallbackModel by lazy { createGenerativeModel(FALLBACK_MODEL) }
+
     private var chatSession: Chat? = null
+    private var usingFallback = false
 
     @Synchronized
     private fun getOrCreateChat(): Chat {
-        return chatSession ?: generativeModel.startChat().also { chatSession = it }
+        return chatSession ?: (if (usingFallback) fallbackModel else primaryModel)
+            .startChat()
+            .also { chatSession = it }
     }
 
-    // 3. Envia mensagem aplicando sanitização, rate limiting e resiliência
     override fun sendMessageStream(userPrompt: String): Flow<String> {
-        // A. Sanitização e validação de tamanho / caracteres de controle
         val sanitized = InputSanitizer.sanitize(userPrompt)
         if (sanitized.isBlank()) {
             return flow { emit("Estou aqui com você. Pode falar com calma no seu tempo.") }
         }
 
-        // B. Verificação de segurança (Anti-Prompt Injection / Sequestro)
         if (!InputSanitizer.isSafe(sanitized)) {
             return flow {
                 emit("Estou focado em cuidar de você e te ajudar a se acalmar agora. Vamos respirar fundo juntos?")
             }
         }
 
-        // C. Mitigação de Flooding e Exaustão de Cota (Rate Limiting)
         when (val rateCheck = rateLimiter.tryAcquire()) {
             is RateLimitResult.Denied -> {
                 return flow { emit(rateCheck.reason) }
             }
-            is RateLimitResult.Allowed -> { /* Prossegue com a chamada */ }
+            is RateLimitResult.Allowed -> { /* Prossegue com a requisição */ }
         }
 
-        // D. Verificação de disponibilidade da Chave de API
         if (BuildConfig.GEMINI_API_KEY.isBlank()) {
+            Log.e(TAG, "GEMINI_API_KEY está vazia no BuildConfig!")
             return flow {
                 emit("Estou aqui com você. Respire fundo devagar... já vamos continuar.")
             }
         }
 
-        // E. Execução protegida do streaming de tokens
         return getOrCreateChat()
             .sendMessageStream(sanitized)
             .mapNotNull { it.text }
-            .catch { _ ->
-                // Tratamento gracioso sem expor detalhes técnicos ou falhas de infraestrutura
+            .catch { error ->
+                Log.e(TAG, "Erro na resposta do modelo primário: ${error.message}", error)
+                // Se falhou no modelo primário, tenta alternar para o fallback
+                if (!usingFallback) {
+                    usingFallback = true
+                    chatSession = null
+                    try {
+                        getOrCreateChat()
+                            .sendMessageStream(sanitized)
+                            .mapNotNull { it.text }
+                            .collect { token -> emit(token) }
+                        return@catch
+                    } catch (fallbackError: Exception) {
+                        Log.e(TAG, "Erro também no fallback: ${fallbackError.message}", fallbackError)
+                    }
+                }
                 emit("Estou aqui com você. Respire fundo devagar... já vamos continuar.")
             }
             .flowOn(Dispatchers.IO)
@@ -81,6 +101,7 @@ class GeminiChatRepository(
 
     override fun resetChat() {
         chatSession = null
+        usingFallback = false
         rateLimiter.reset()
     }
 }
