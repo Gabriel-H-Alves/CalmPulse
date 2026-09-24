@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -124,33 +125,37 @@ fun BreathingCircle(
     )
 
     // Gradiente holográfico Meta AI com transparências etéreas
-    val ringGradient = Brush.sweepGradient(
-        colors = listOf(
-            MetaAiBlue,
-            MetaAiPurple,
-            MetaAiPink,
-            MetaAiCyan,
-            WhatsAppGreen,
-            MetaAiBlue
+    val ringGradient = remember {
+        Brush.sweepGradient(
+            colors = listOf(
+                MetaAiBlue,
+                MetaAiPurple,
+                MetaAiPink,
+                MetaAiCyan,
+                WhatsAppGreen,
+                MetaAiBlue
+            )
         )
-    )
+    }
 
-    val innerOrbGradient = if (isDark) {
-        Brush.radialGradient(
-            colors = listOf(
-                MetaAiCyan.copy(alpha = 0.25f),
-                MetaAiPurple.copy(alpha = 0.15f),
-                Color(0xFF1F2C34).copy(alpha = 0.85f)
+    val innerOrbGradient = remember(isDark) {
+        if (isDark) {
+            Brush.radialGradient(
+                colors = listOf(
+                    MetaAiCyan.copy(alpha = 0.25f),
+                    MetaAiPurple.copy(alpha = 0.15f),
+                    Color(0xFF1F2C34).copy(alpha = 0.85f)
+                )
             )
-        )
-    } else {
-        Brush.radialGradient(
-            colors = listOf(
-                MetaAiCyan.copy(alpha = 0.35f),
-                MetaAiPurple.copy(alpha = 0.20f),
-                Color.White.copy(alpha = 0.90f)
+        } else {
+            Brush.radialGradient(
+                colors = listOf(
+                    MetaAiCyan.copy(alpha = 0.35f),
+                    MetaAiPurple.copy(alpha = 0.20f),
+                    Color.White.copy(alpha = 0.90f)
+                )
             )
-        )
+        }
     }
 
     val primaryText = if (isDark) Color(0xFFE9EDEF) else Color(0xFF111B21)
@@ -189,7 +194,10 @@ fun BreathingCircle(
             Box(
                 modifier = Modifier
                     .size(220.dp)
-                    .scale(animatedScale * 1.05f)
+                    .graphicsLayer {
+                        scaleX = animatedScale * 1.05f
+                        scaleY = animatedScale * 1.05f
+                    }
                     .clip(CircleShape)
                     .background(
                         Brush.radialGradient(
@@ -206,7 +214,10 @@ fun BreathingCircle(
             Canvas(
                 modifier = Modifier
                     .size(200.dp)
-                    .scale(animatedScale)
+                    .graphicsLayer {
+                        scaleX = animatedScale
+                        scaleY = animatedScale
+                    }
             ) {
                 drawCircle(
                     brush = ringGradient,
@@ -219,7 +230,10 @@ fun BreathingCircle(
             Box(
                 modifier = Modifier
                     .size(172.dp)
-                    .scale(animatedScale)
+                    .graphicsLayer {
+                        scaleX = animatedScale
+                        scaleY = animatedScale
+                    }
                     .clip(CircleShape)
                     .background(innerOrbGradient),
                 contentAlignment = Alignment.Center

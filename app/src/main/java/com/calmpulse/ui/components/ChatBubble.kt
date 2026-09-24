@@ -31,11 +31,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -95,8 +97,10 @@ fun ChatBubble(
     val textColor = if (isDark) DarkTextPrimary else TextPrimary
     val timeColor = if (isDark) DarkTextSecondary else TextSecondary
 
-    val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-    val formattedTime = timeFormat.format(Date(message.timestamp))
+    val formattedTime = remember(message.timestamp) {
+        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+        timeFormat.format(Date(message.timestamp))
+    }
 
     // Formato com cantos arredondados clássicos do WhatsApp iOS
     val bubbleShape = if (isUser) {
@@ -289,20 +293,23 @@ private fun TypingDotsIndicator(color: Color) {
         Box(
             modifier = Modifier
                 .size(6.dp)
+                .graphicsLayer { alpha = dot1 }
                 .clip(CircleShape)
-                .background(color.copy(alpha = dot1))
+                .background(color)
         )
         Box(
             modifier = Modifier
                 .size(6.dp)
+                .graphicsLayer { alpha = dot2 }
                 .clip(CircleShape)
-                .background(color.copy(alpha = dot2))
+                .background(color)
         )
         Box(
             modifier = Modifier
                 .size(6.dp)
+                .graphicsLayer { alpha = dot3 }
                 .clip(CircleShape)
-                .background(color.copy(alpha = dot3))
+                .background(color)
         )
     }
 }

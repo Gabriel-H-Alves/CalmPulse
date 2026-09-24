@@ -1,35 +1,40 @@
 package com.calmpulse.ui.chat
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -40,57 +45,41 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.VolumeMute
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.SelfImprovement
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -99,14 +88,14 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.calmpulse.audio.VoiceRecognizer
+import java.util.Locale
 import com.calmpulse.audio.VoiceSpeaker
-import com.calmpulse.data.model.MessageSender
 import com.calmpulse.ui.components.BreathingCircle
 import com.calmpulse.ui.components.ChatBubble
-import com.calmpulse.ui.components.GeneralSettingsSheet
-import com.calmpulse.ui.components.InterfaceSettingsSheet
 import com.calmpulse.ui.components.MetaAiRing
 import com.calmpulse.ui.components.QuickPromptChips
+import com.calmpulse.ui.components.SettingsSheet
+import com.calmpulse.ui.components.SupportNumbersSheet
 import com.calmpulse.ui.theme.DarkBackground
 import com.calmpulse.ui.theme.DarkTextPrimary
 import com.calmpulse.ui.theme.DarkTextSecondary
@@ -120,15 +109,15 @@ import com.calmpulse.ui.theme.WhatsAppInputBarLight
 import com.calmpulse.ui.theme.WhatsAppInputFieldDark
 import com.calmpulse.ui.theme.WhatsAppInputFieldLight
 import com.calmpulse.ui.theme.WhatsAppTopBarDark
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import com.calmpulse.ui.theme.WhatsAppTopBarLight
 
 enum class CalmPulseTab {
     CHAT,
-    BREATHING,
-    SUPPORT
+    BREATHING
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel = viewModel(),
@@ -146,16 +135,13 @@ fun ChatScreen(
     var currentSpokenText by remember { mutableStateOf<String?>(null) }
     var voiceErrorMessage by remember { mutableStateOf<String?>(null) }
 
-    var showMenu by remember { mutableStateOf(false) }
-    var showActionSheet by remember { mutableStateOf(false) }
-    var showInterfaceSettings by remember { mutableStateOf(false) }
-    var showGeneralSettings by remember { mutableStateOf(false) }
+    var showSettingsSheet by remember { mutableStateOf(false) }
+    var showSupportNumbersSheet by remember { mutableStateOf(false) }
     var showResetConfirmDialog by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState()
 
     val isDark = MaterialTheme.colorScheme.background == DarkBackground
 
-    // Cores temáticas WhatsApp iOS 2025
+    // Cores temáticas WhatsApp iOS
     val chatBg = if (isDark) WhatsAppChatBgDark else WhatsAppChatBgLight
     val topBarBg = if (isDark) WhatsAppTopBarDark else WhatsAppTopBarLight
     val inputBarBg = if (isDark) WhatsAppInputBarDark else WhatsAppInputBarLight
@@ -171,20 +157,46 @@ fun ChatScreen(
         }
     }
 
-    // Inicializa STT
+    var recordingDurationSeconds by remember { mutableIntStateOf(0) }
+    var currentVoiceRms by remember { mutableFloatStateOf(0f) }
+    var liveVoiceText by remember { mutableStateOf("") }
+
+    // Inicializa STT resiliente com transcrição parcial e visualização de ondas
     val recognizer = remember {
         VoiceRecognizer(
             context = context,
             onResult = { spokenText ->
+                liveVoiceText = spokenText
                 viewModel.sendMessage(spokenText)
+            },
+            onPartialResult = { partial ->
+                liveVoiceText = partial
             },
             onListeningStateChanged = { listening ->
                 isListening = listening
+                if (!listening) {
+                    currentVoiceRms = 0f
+                }
+            },
+            onRmsUpdate = { rms ->
+                currentVoiceRms = rms
             },
             onError = { errorText ->
                 voiceErrorMessage = errorText
             }
         )
+    }
+
+    // Cronômetro do áudio de gravação
+    LaunchedEffect(isListening) {
+        if (isListening) {
+            recordingDurationSeconds = 0
+            liveVoiceText = ""
+            while (true) {
+                kotlinx.coroutines.delay(1000)
+                recordingDurationSeconds++
+            }
+        }
     }
 
     // Auto-dismiss do aviso de voz e de feedback
@@ -219,7 +231,7 @@ fun ChatScreen(
         }
     }
 
-    // Auto-scroll otimizado: anima apenas na nova mensagem e faz scroll direto no streaming
+    // Auto-scroll fluido em novas mensagens e streaming
     LaunchedEffect(uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
             listState.animateScrollToItem(uiState.messages.lastIndex)
@@ -232,19 +244,13 @@ fun ChatScreen(
         }
     }
 
-    // O áudio é reproduzido sob demanda pelo usuário ao tocar no botão de som da mensagem
-
-    // Animação de pulso do botão de microfone enquanto escuta
-    val micPulseTransition = rememberInfiniteTransition(label = "micPulse")
-    val micScale by micPulseTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.18f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 600, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "micScale"
-    )
+    // Abertura do Teclado: Auto-scroll instantâneo para a última mensagem sem travamento
+    val isImeVisible = WindowInsets.isImeVisible
+    LaunchedEffect(isImeVisible) {
+        if (isImeVisible && uiState.messages.isNotEmpty()) {
+            listState.animateScrollToItem(uiState.messages.lastIndex)
+        }
+    }
 
     Scaffold(
         containerColor = chatBg,
@@ -316,16 +322,14 @@ fun ChatScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        if (selectedTab != CalmPulseTab.CHAT) {
-                            selectedTab = CalmPulseTab.CHAT
+                    if (selectedTab == CalmPulseTab.BREATHING) {
+                        IconButton(onClick = { selectedTab = CalmPulseTab.CHAT }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Voltar ao chat",
+                                tint = WhatsAppGreen
+                            )
                         }
-                    }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Voltar",
-                            tint = WhatsAppGreen
-                        )
                     }
                 },
                 actions = {
@@ -335,6 +339,24 @@ fun ChatScreen(
                                 Icons.AutoMirrored.Filled.VolumeMute,
                                 contentDescription = "Mutar voz",
                                 tint = WhatsAppGreen
+                            )
+                        }
+                    }
+
+                    // Atalho rápido e direto para Linhas de Apoio e Emergência (CVV 188, SAMU 192, etc.)
+                    IconButton(onClick = { showSupportNumbersSheet = true }) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFFF3B30).copy(alpha = if (isDark) 0.16f else 0.10f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Call,
+                                contentDescription = "Números de Apoio e Emergência (CVV 188)",
+                                tint = Color(0xFFFF3B30),
+                                modifier = Modifier.size(19.dp)
                             )
                         }
                     }
@@ -350,40 +372,13 @@ fun ChatScreen(
                         )
                     }
 
-                    Box {
-                        IconButton(onClick = { showMenu = !showMenu }) {
-                            Icon(
-                                Icons.Default.MoreVert,
-                                contentDescription = "Mais opções",
-                                tint = secondaryText
-                            )
-                        }
-
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Configurações de Interface") },
-                                onClick = {
-                                    showMenu = false
-                                    showInterfaceSettings = true
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Palette, contentDescription = null, tint = WhatsAppGreen)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Configurações Gerais") },
-                                onClick = {
-                                    showMenu = false
-                                    showGeneralSettings = true
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Settings, contentDescription = null, tint = secondaryText)
-                                }
-                            )
-                        }
+                    // Botão único de Configurações
+                    IconButton(onClick = { showSettingsSheet = true }) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Configurações",
+                            tint = secondaryText
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -393,10 +388,9 @@ fun ChatScreen(
         },
         bottomBar = {
             Column {
-                // Barra de Entrada WhatsApp iOS 2025 Ultra Clean
                 if (selectedTab == CalmPulseTab.CHAT) {
-                    // Chips Rápidos de Apoio Emocional (Cognitive Offloading para momentos de crise)
-                    if (!uiState.isStreaming) {
+                    // Chips de Apoio Emocional exibidos apenas durante conversa ativa
+                    if (!uiState.isStreaming && uiState.messages.isNotEmpty()) {
                         val quickChips = listOf(
                             "🌊 Me ajuda a respirar",
                             "💭 Só quero desabafar",
@@ -437,6 +431,7 @@ fun ChatScreen(
                         }
                     }
 
+                    // Barra de Entrada WhatsApp iOS Ultra Clean com ajuste suave de teclado
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -445,111 +440,212 @@ fun ChatScreen(
                             .background(inputBarBg)
                             .padding(horizontal = 10.dp, vertical = 8.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Botão "+" circular estilo WhatsApp iOS
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isDark) Color(0xFF2A3942) else Color(0xFFE2E8F0))
-                                    .clickable { showActionSheet = true },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = "Ações rápidas",
-                                    tint = WhatsAppGreen,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
+                        // AnimatedContent entre o modo de digitação e a Barra de Gravação de Áudio
+                        AnimatedContent(
+                            targetState = isListening,
+                            transitionSpec = {
+                                fadeIn(animationSpec = tween(180)) togetherWith fadeOut(animationSpec = tween(180))
+                            },
+                            label = "audioRecordingBarTransition"
+                        ) { listening ->
+                            if (listening) {
+                                // ── BARRA DE GRAVAÇÃO ATIVA (ESTILO WHATSAPP/TELEGRAM) ──
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(24.dp))
+                                        .background(inputFieldBg)
+                                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Ponto vermelho piscante de gravação
+                                    val pulseAnim = rememberInfiniteTransition(label = "recDot")
+                                    val dotAlpha by pulseAnim.animateFloat(
+                                        initialValue = 1f,
+                                        targetValue = 0.2f,
+                                        animationSpec = infiniteRepeatable(
+                                            animation = tween(600, easing = LinearEasing),
+                                            repeatMode = RepeatMode.Reverse
+                                        ),
+                                        label = "dotAlpha"
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(9.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFFFF3B30).copy(alpha = dotAlpha))
+                                    )
 
-                            Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
 
-                            // Campo de Texto em Pílula Estilo WhatsApp iOS
-                            androidx.compose.foundation.text.BasicTextField(
-                                value = uiState.inputText,
-                                onValueChange = viewModel::onInputTextChanged,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(22.dp))
-                                    .background(inputFieldBg)
-                                    .padding(horizontal = 16.dp, vertical = 11.dp),
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                    color = primaryText,
-                                    fontSize = 15.sp
-                                ),
-                                cursorBrush = androidx.compose.ui.graphics.SolidColor(WhatsAppGreen),
-                                maxLines = 4,
-                                decorationBox = { innerTextField ->
-                                    Box(contentAlignment = Alignment.CenterStart) {
-                                        if (uiState.inputText.isEmpty()) {
+                                    // Timer de gravação
+                                    val minutes = recordingDurationSeconds / 60
+                                    val seconds = recordingDurationSeconds % 60
+                                    Text(
+                                        text = String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds),
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = primaryText,
+                                            fontSize = 14.sp
+                                        )
+                                    )
+
+                                    Spacer(modifier = Modifier.width(10.dp))
+
+                                    // Visualizador de Ondas Sonoras ou Transcrição ao Vivo
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(34.dp),
+                                        contentAlignment = Alignment.CenterStart
+                                    ) {
+                                        if (liveVoiceText.isNotBlank()) {
                                             Text(
-                                                text = "Mensagem...",
-                                                style = MaterialTheme.typography.bodyMedium.copy(
-                                                    color = secondaryText,
-                                                    fontSize = 15.sp
+                                                text = liveVoiceText,
+                                                maxLines = 1,
+                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                                style = MaterialTheme.typography.bodySmall.copy(
+                                                    color = primaryText,
+                                                    fontSize = 13.5.sp
                                                 )
                                             )
+                                        } else {
+                                            VoiceWaveVisualizer(rms = currentVoiceRms, isDark = isDark)
                                         }
-                                        innerTextField()
+                                    }
+
+                                    Spacer(modifier = Modifier.width(6.dp))
+
+                                    // Botão Cancelar (Lixeira / Descartar áudio)
+                                    IconButton(
+                                        onClick = {
+                                            isListening = false
+                                            recognizer.cancelListening()
+                                        },
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Cancelar áudio",
+                                            tint = secondaryText,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.width(4.dp))
+
+                                    // Botão Enviar Áudio (Verde WhatsApp)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(38.dp)
+                                            .clip(CircleShape)
+                                            .background(WhatsAppGreen)
+                                            .clickable {
+                                                val textToSend = liveVoiceText.trim()
+                                                isListening = false
+                                                recognizer.cancelListening()
+                                                if (textToSend.isNotBlank()) {
+                                                    viewModel.sendMessage(textToSend)
+                                                } else {
+                                                    viewModel.sendMessage("🎤 (Mensagem de voz compartilhada)")
+                                                }
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.Send,
+                                            contentDescription = "Enviar mensagem de áudio",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(19.dp)
+                                        )
                                     }
                                 }
-                            )
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            if (uiState.inputText.isNotBlank()) {
-                                // Botão Enviar com verde WhatsApp vibrante
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                        .background(WhatsAppGreen)
-                                        .clickable { viewModel.sendMessage() },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.Send,
-                                        contentDescription = "Enviar",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
                             } else {
-                                // Botão de Microfone de Voz (STT) com feedback de pulso
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .scale(if (isListening) micScale else 1f)
-                                        .clip(CircleShape)
-                                        .background(if (isListening) Color(0xFFE53935) else WhatsAppGreen)
-                                        .clickable {
-                                            if (isListening) {
-                                                recognizer.stopListening()
-                                            } else {
-                                                val hasPermission = ContextCompat.checkSelfPermission(
-                                                    context,
-                                                    Manifest.permission.RECORD_AUDIO
-                                                ) == PackageManager.PERMISSION_GRANTED
-
-                                                if (hasPermission) {
-                                                    recognizer.startListening()
-                                                } else {
-                                                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                                }
-                                            }
-                                        },
-                                    contentAlignment = Alignment.Center
+                                // ── BARRA NORMAL: INPUT DE TEXTO + MICROFONE ──
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Mic,
-                                        contentDescription = if (isListening) "Parar gravação" else "Gravar áudio",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(20.dp)
+                                    // Campo de Texto em Pílula
+                                    androidx.compose.foundation.text.BasicTextField(
+                                        value = uiState.inputText,
+                                        onValueChange = viewModel::onInputTextChanged,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(22.dp))
+                                            .background(inputFieldBg)
+                                            .padding(horizontal = 16.dp, vertical = 11.dp),
+                                        textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                            color = primaryText,
+                                            fontSize = 15.sp
+                                        ),
+                                        cursorBrush = androidx.compose.ui.graphics.SolidColor(WhatsAppGreen),
+                                        maxLines = 4,
+                                        decorationBox = { innerTextField ->
+                                            Box(contentAlignment = Alignment.CenterStart) {
+                                                if (uiState.inputText.isEmpty()) {
+                                                    Text(
+                                                        text = "Mensagem...",
+                                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                                            color = secondaryText,
+                                                            fontSize = 15.sp
+                                                        )
+                                                    )
+                                                }
+                                                innerTextField()
+                                            }
+                                        }
                                     )
+
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    if (uiState.inputText.isNotBlank()) {
+                                        // Botão Enviar com verde WhatsApp vibrante
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(CircleShape)
+                                                .background(WhatsAppGreen)
+                                                .clickable { viewModel.sendMessage() },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Filled.Send,
+                                                contentDescription = "Enviar",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    } else {
+                                        // Botão de Microfone de resposta imediata
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(CircleShape)
+                                                .background(WhatsAppGreen)
+                                                .clickable {
+                                                    val hasPermission = ContextCompat.checkSelfPermission(
+                                                        context,
+                                                        Manifest.permission.RECORD_AUDIO
+                                                    ) == PackageManager.PERMISSION_GRANTED
+
+                                                    if (hasPermission) {
+                                                        isListening = true
+                                                        recognizer.startListening()
+                                                    } else {
+                                                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                                    }
+                                                },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Mic,
+                                                contentDescription = "Gravar áudio",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -602,12 +698,13 @@ fun ChatScreen(
                             }
                         }
 
-                        // Lista de Mensagens
+                        // Lista de Mensagens otimizada
                         LazyColumn(
                             state = listState,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .weight(1f)
+                                .weight(1f),
+                            contentPadding = PaddingValues(vertical = 4.dp)
                         ) {
                             // Card de Acolhimento e Meta AI quando vazio
                             if (uiState.messages.isEmpty()) {
@@ -662,7 +759,7 @@ fun ChatScreen(
 
                                         Spacer(modifier = Modifier.height(16.dp))
 
-                                        // Badge de criptografia e acolhimento WhatsApp
+                                        // Badge de segurança e acolhimento WhatsApp
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(8.dp))
@@ -746,254 +843,28 @@ fun ChatScreen(
                         )
                     }
                 }
-
-                CalmPulseTab.SUPPORT -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        MetaAiRing(
-                            size = 72.dp,
-                            strokeWidth = 4.dp
-                        ) {
-                            Icon(
-                                Icons.Default.SelfImprovement,
-                                contentDescription = null,
-                                tint = WhatsAppGreen,
-                                modifier = Modifier.size(36.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(18.dp))
-
-                        Text(
-                            text = "CalmPulse & Apoio Imediato",
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = primaryText
-                            )
-                        )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Text(
-                            text = "O CalmPulse oferece acolhimento emocional inteligente baseado em técnicas de atenção plena e respiração.",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = secondaryText,
-                                textAlign = TextAlign.Center,
-                                lineHeight = 22.sp
-                            )
-                        )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        Card(
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isDark) Color(0xFF1F2C34) else Color(0xFFFFFFFF)
-                            ),
-                            elevation = CardDefaults.cardElevation(2.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    val callIntent = Intent(Intent.ACTION_DIAL).apply {
-                                        data = Uri.parse("tel:188")
-                                    }
-                                    context.startActivity(callIntent)
-                                }
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFE53935).copy(alpha = 0.15f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        Icons.Default.Call,
-                                        contentDescription = null,
-                                        tint = Color(0xFFE53935),
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(14.dp))
-                                Column {
-                                    Text(
-                                        text = "Precisa de ajuda humana urgente?",
-                                        style = MaterialTheme.typography.titleSmall.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            color = primaryText
-                                        )
-                                    )
-                                    Text(
-                                        text = "Ligue gratuitamente para o CVV 188 (24 horas).",
-                                        style = MaterialTheme.typography.bodySmall.copy(color = secondaryText)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
             }
         }
 
-        // Modal Bottom Sheet de Ações Rápidas do Botão "+"
-        if (showActionSheet) {
-            ModalBottomSheet(
-                onDismissRequest = { showActionSheet = false },
-                sheetState = sheetState,
-                containerColor = topBarBg
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = "Ações Rápidas",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = primaryText
-                        ),
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable {
-                                showActionSheet = false
-                                selectedTab = CalmPulseTab.BREATHING
-                            }
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(WhatsAppGreen.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Spa, contentDescription = null, tint = WhatsAppGreen)
-                        }
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column {
-                            Text(
-                                "Iniciar Respiração 4-7-8",
-                                fontWeight = FontWeight.SemiBold,
-                                color = primaryText
-                            )
-                            Text(
-                                "Exercício guiado para desacelerar a mente",
-                                style = MaterialTheme.typography.bodySmall.copy(color = secondaryText)
-                            )
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable {
-                                showActionSheet = false
-                                val callIntent = Intent(Intent.ACTION_DIAL).apply {
-                                    data = Uri.parse("tel:188")
-                                }
-                                context.startActivity(callIntent)
-                            }
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFE53935).copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Call, contentDescription = null, tint = Color(0xFFE53935))
-                        }
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column {
-                            Text(
-                                "Ligar para CVV (188)",
-                                fontWeight = FontWeight.SemiBold,
-                                color = primaryText
-                            )
-                            Text(
-                                "Apoio emocional humano gratuito e 24h",
-                                style = MaterialTheme.typography.bodySmall.copy(color = secondaryText)
-                            )
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable {
-                                showActionSheet = false
-                                showResetConfirmDialog = true
-                            }
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(secondaryText.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, tint = secondaryText)
-                        }
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column {
-                            Text(
-                                "Reiniciar Conversa",
-                                fontWeight = FontWeight.SemiBold,
-                                color = primaryText
-                            )
-                            Text(
-                                "Começar um novo ciclo de diálogo tranquilo",
-                                style = MaterialTheme.typography.bodySmall.copy(color = secondaryText)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
-            }
-        }
-
-        // Modal Bottom Sheet: Configurações de Interface
-        if (showInterfaceSettings) {
-            InterfaceSettingsSheet(
+        // Modal Bottom Sheet: Linhas de Apoio e Emergência
+        if (showSupportNumbersSheet) {
+            SupportNumbersSheet(
                 isDarkTheme = isDarkTheme,
-                onToggleTheme = onToggleTheme,
-                onDismiss = { showInterfaceSettings = false }
+                onDismiss = { showSupportNumbersSheet = false }
             )
         }
 
-        // Modal Bottom Sheet: Configurações Gerais
-        if (showGeneralSettings) {
-            GeneralSettingsSheet(
+        // Modal Bottom Sheet: Configurações Unificadas
+        if (showSettingsSheet) {
+            SettingsSheet(
                 isDarkTheme = isDarkTheme,
+                onToggleTheme = onToggleTheme,
                 onResetChat = {
-                    showGeneralSettings = false
+                    showSettingsSheet = false
                     showResetConfirmDialog = true
                 },
                 onCheckUpdate = onCheckUpdate,
-                onDismiss = { showGeneralSettings = false }
+                onDismiss = { showSettingsSheet = false }
             )
         }
 
@@ -1025,6 +896,47 @@ fun ChatScreen(
                         Text("Cancelar")
                     }
                 }
+            )
+        }
+    }
+}
+
+/**
+ * Visualizador de ondas sonoras animadas em tempo real durante a gravação de áudio.
+ * Reage tanto ao nível de volume (RMS) quanto a uma ondulação suave senoidal.
+ */
+@Composable
+private fun VoiceWaveVisualizer(rms: Float, isDark: Boolean) {
+    val infiniteTransition = rememberInfiniteTransition(label = "waveAnim")
+    val phase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 6.28f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "phase"
+    )
+
+    val barCount = 14
+    val baseColor = WhatsAppGreen
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.5.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        for (i in 0 until barCount) {
+            val normalizedRms = (rms.coerceIn(0f, 10f) / 10f)
+            val sineVal = kotlin.math.sin(phase + (i * 0.45f))
+            val heightFraction = (0.25f + 0.35f * (sineVal + 1f) / 2f + 0.4f * normalizedRms).coerceIn(0.2f, 1f)
+
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(26.dp * heightFraction)
+                    .clip(RoundedCornerShape(1.5.dp))
+                    .background(baseColor.copy(alpha = if (isDark) 0.85f else 0.75f))
             )
         }
     }
