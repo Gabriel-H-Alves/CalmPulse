@@ -64,12 +64,15 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -133,6 +136,11 @@ fun SettingsSheet(
     accentColorIndex: Int = 0,
     onSelectAccent: (Int) -> Unit = {},
     onTtsRateChange: (String) -> Unit = {},
+    voiceEngine: String = "GEMINI_NEURAL",
+    onVoiceEngineChange: (String) -> Unit = {},
+    neuralVoice: String = "Aoede",
+    onNeuralVoiceChange: (String) -> Unit = {},
+    onPreviewVoice: (String) -> Unit = {},
     onAiModelChange: (String) -> Unit = {},
     onAiToneChange: (String) -> Unit = {},
     onFontSizeChange: (String) -> Unit = {},
@@ -187,6 +195,12 @@ fun SettingsSheet(
     }
     var ttsRate by remember {
         mutableStateOf(prefs.getString("tts_rate_label", "0.85x (Sereno)") ?: "0.85x (Sereno)")
+    }
+    var localVoiceEngine by remember {
+        mutableStateOf(prefs.getString("voice_engine", voiceEngine) ?: voiceEngine)
+    }
+    var localNeuralVoice by remember {
+        mutableStateOf(prefs.getString("neural_voice_name", neuralVoice) ?: neuralVoice)
     }
     var aiModel by remember {
         mutableStateOf(prefs.getString("selected_ai_model", "Flash Lite (Recomendado)") ?: "Flash Lite (Recomendado)")
@@ -1124,6 +1138,124 @@ fun SettingsSheet(
                                     subtitleColor = subtitleColor,
                                     accentColor = activeAccent
                                 )
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            IosSectionHeader(title = "MOTOR DE VOZ & SÍNTESE", color = headerSectionColor)
+                            IosGroupCard(cardBg = cardBg, cardBorder = cardBorder) {
+                                Column(modifier = Modifier.padding(14.dp)) {
+                                    val engines = listOf(
+                                        Pair("GEMINI_NEURAL", "Gemini Neural (Estúdio • Humana)"),
+                                        Pair("SYSTEM_TTS", "Voz do Sistema (Nativo Android)")
+                                    )
+                                    engines.forEachIndexed { idx, enginePair ->
+                                        val isSelected = localVoiceEngine == enginePair.first
+                                        if (idx > 0) Spacer(modifier = Modifier.height(8.dp))
+                                        Surface(
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = if (isSelected) activeAccent.copy(alpha = 0.15f) else cardBg,
+                                            border = BorderStroke(if (isSelected) 1.8.dp else 0.8.dp, if (isSelected) activeAccent else subtitleColor.copy(alpha = 0.2f)),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    localVoiceEngine = enginePair.first
+                                                    prefs.edit().putString("voice_engine", enginePair.first).apply()
+                                                    onVoiceEngineChange(enginePair.first)
+                                                }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(
+                                                    imageVector = if (enginePair.first == "GEMINI_NEURAL") Icons.Default.Spa else Icons.Default.GraphicEq,
+                                                    contentDescription = null,
+                                                    tint = if (isSelected) activeAccent else subtitleColor,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(10.dp))
+                                                Text(
+                                                    text = enginePair.second,
+                                                    fontSize = 13.sp,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                    color = titleColor,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                if (isSelected) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Check,
+                                                        contentDescription = "Selecionado",
+                                                        tint = activeAccent,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (localVoiceEngine == "GEMINI_NEURAL") {
+                                Spacer(modifier = Modifier.height(14.dp))
+                                IosSectionHeader(title = "TIMBRES NEURAIS DE ESTÚDIO (SEM VOZ DE GPS)", color = headerSectionColor)
+                                IosGroupCard(cardBg = cardBg, cardBorder = cardBorder) {
+                                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        val voices = listOf(
+                                            Triple("Aoede", "Aoede (Serena • Feminina)", "🌸 Tom aveludado, sereno e acolhedor"),
+                                            Triple("Kore", "Kore (Calorosa • Feminina)", "🌿 Tom caloroso, amigável e natural"),
+                                            Triple("Charon", "Charon (Profundo • Masculino)", "🪵 Tom grave, compassado e calmo"),
+                                            Triple("Fenrir", "Fenrir (Tranquilo • Masculino)", "🛡️ Tom firme, seguro e reconfortante")
+                                        )
+                                        voices.forEach { (voiceId, voiceTitle, voiceDesc) ->
+                                            val isSelected = localNeuralVoice == voiceId
+                                            Surface(
+                                                shape = RoundedCornerShape(10.dp),
+                                                color = if (isSelected) activeAccent.copy(alpha = 0.12f) else cardBg,
+                                                border = BorderStroke(if (isSelected) 1.8.dp else 0.8.dp, if (isSelected) activeAccent else subtitleColor.copy(alpha = 0.2f)),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clickable {
+                                                            localNeuralVoice = voiceId
+                                                            prefs.edit().putString("neural_voice_name", voiceId).apply()
+                                                            onNeuralVoiceChange(voiceId)
+                                                        }
+                                                        .padding(horizontal = 12.dp, vertical = 9.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Text(
+                                                            text = voiceTitle,
+                                                            fontSize = 13.5.sp,
+                                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                            color = titleColor
+                                                        )
+                                                        Text(
+                                                            text = voiceDesc,
+                                                            fontSize = 11.sp,
+                                                            color = subtitleColor
+                                                        )
+                                                    }
+                                                    // Botão de Ouvir Prévia (Play)
+                                                    IconButton(
+                                                        onClick = { onPreviewVoice(voiceId) },
+                                                        modifier = Modifier.size(36.dp)
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.PlayArrow,
+                                                            contentDescription = "Ouvir Prévia",
+                                                            tint = activeAccent,
+                                                            modifier = Modifier.size(22.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
 

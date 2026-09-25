@@ -971,6 +971,17 @@ fun ChatScreen(
                     speaker.updateRateFromLabel(rate)
                     prefs.edit().putString("tts_speech_rate", rate).apply()
                 },
+                voiceEngine = speaker.currentEngine,
+                onVoiceEngineChange = { engine ->
+                    speaker.setVoiceEngine(engine)
+                },
+                neuralVoice = speaker.currentVoiceName,
+                onNeuralVoiceChange = { voice ->
+                    speaker.setNeuralVoice(voice)
+                },
+                onPreviewVoice = { voice ->
+                    speaker.speakPreview(voice)
+                },
                 onAiModelChange = { model ->
                     aiModel = model
                     viewModel.updateModel(model)
