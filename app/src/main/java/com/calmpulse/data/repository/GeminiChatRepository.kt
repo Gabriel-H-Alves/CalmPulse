@@ -28,17 +28,17 @@ class GeminiChatRepository(
     companion object {
         private const val TAG = "GeminiChatRepo"
 
-        // Cascata de modelos em ordem de prioridade
+        // Cascata de modelos em ordem de prioridade (testados e operacionais)
         val CANDIDATE_MODELS = listOf(
-            "gemini-2.5-flash",
-            "gemini-2.0-flash",
-            "gemini-1.5-flash",
+            "gemini-flash-lite-latest",
+            "gemini-3.5-flash-lite",
+            "gemini-3.6-flash",
             "gemini-flash-latest"
         )
         private const val MAX_RETRIES_PER_MODEL = 2
     }
 
-    private var activeModelIndex = 0
+    private var activeModelName: String? = null
     private var chatSession: Chat? = null
     private var currentAgentName: String = "CalmPulse"
     private var currentTone: String = "Acolhedor & Empático"
@@ -63,10 +63,11 @@ class GeminiChatRepository(
 
     fun setPreferredModel(model: String) {
         preferredModel = when {
-            model.contains("2.5") -> "gemini-2.5-flash"
-            model.contains("1.5 Pro", ignoreCase = true) -> "gemini-1.5-pro"
-            model.contains("1.5 Flash", ignoreCase = true) -> "gemini-1.5-flash"
-            else -> null
+            model.contains("3.6") -> "gemini-3.6-flash"
+            model.contains("3.5") -> "gemini-3.5-flash-lite"
+            model.contains("3.8") -> "gemini-3.8-flash"
+            model.contains("Lite", ignoreCase = true) || model.contains("Flash", ignoreCase = true) -> "gemini-flash-lite-latest"
+            else -> "gemini-flash-lite-latest"
         }
         chatSession = null
     }
@@ -74,20 +75,11 @@ class GeminiChatRepository(
     private fun createGenerativeModel(modelName: String): GenerativeModel {
         return GenerativeModel(
             modelName = modelName,
-            apiKey = BuildConfig.GEMINI_API_KEY,
+            apiKey = BuildConfig.GEMINI_API_KEY.trim(),
             systemInstruction = com.google.ai.client.generativeai.type.content {
                 text(SystemPrompt.getInstruction(currentAgentName, currentTone))
             }
         )
-    }
-
-    @Synchronized
-    private fun getOrCreateChat(): Pair<Chat, String> {
-        val modelName = preferredModel ?: CANDIDATE_MODELS[activeModelIndex.coerceIn(0, CANDIDATE_MODELS.lastIndex)]
-        val session = chatSession ?: createGenerativeModel(modelName)
-            .startChat()
-            .also { chatSession = it }
-        return Pair(session, modelName)
     }
 
     override fun sendMessageStream(userPrompt: String): Flow<String> = flow {
@@ -116,22 +108,26 @@ class GeminiChatRepository(
             return@flow
         }
 
-        // Tentativa de execução com cascata de modelos e retentativa
+        // Fila de modelos priorizando o modelo escolhido pelo usuário
+        val modelQueue = if (preferredModel != null) {
+            listOf(preferredModel!!) + CANDIDATE_MODELS.filter { it != preferredModel }
+        } else {
+            CANDIDATE_MODELS
+        }
+
         var lastException: Exception? = null
         var streamedAnyToken = false
 
-        for (modelIdx in activeModelIndex until CANDIDATE_MODELS.size) {
-            val candidate = CANDIDATE_MODELS[modelIdx]
-
+        for (candidate in modelQueue) {
             for (attempt in 1..MAX_RETRIES_PER_MODEL) {
                 try {
                     val model = createGenerativeModel(candidate)
-                    val chat = if (modelIdx == activeModelIndex && chatSession != null) {
+                    val chat = if (activeModelName == candidate && chatSession != null) {
                         chatSession!!
                     } else {
                         model.startChat().also {
                             chatSession = it
-                            activeModelIndex = modelIdx
+                            activeModelName = candidate
                         }
                     }
 
@@ -139,8 +135,6 @@ class GeminiChatRepository(
                         .mapNotNull { it.text }
                         .collect { token ->
                             if (!streamedAnyToken) {
-                                // Pacing terapêutico: micro-pausa de escuta ativa antes da primeira palavra
-                                delay(600)
                                 streamedAnyToken = true
                             }
                             emit(token)
@@ -151,7 +145,7 @@ class GeminiChatRepository(
 
                 } catch (e: Exception) {
                     lastException = e
-                    Log.w(TAG, "Falha no modelo $candidate (tentativa $attempt/$MAX_RETRIES_PER_MODEL): ${e.javaClass.simpleName}")
+                    Log.w(TAG, "Falha no modelo $candidate (tentativa $attempt/$MAX_RETRIES_PER_MODEL): ${e.message}", e)
 
                     // Se já começou a emitir tokens para o usuário, não devemos trocar no meio
                     if (streamedAnyToken) {
@@ -159,9 +153,9 @@ class GeminiChatRepository(
                         return@flow
                     }
 
-                    // Se for 503 (indisponível) ou erro transitório, espera com backoff exponencial
+                    // Espera suave antes da próxima tentativa
                     if (attempt < MAX_RETRIES_PER_MODEL) {
-                        delay(attempt * 400L)
+                        delay(250L)
                     }
                 }
             }
@@ -172,14 +166,14 @@ class GeminiChatRepository(
         }
 
         // Se todos os modelos falharam
-        Log.e(TAG, "Todos os modelos da cascata falharam. Tipo de erro: ${lastException?.javaClass?.simpleName}")
-        emit("Estou aqui com você. Houve uma oscilação momentânea de conexão, mas sigo ao seu lado. Respire fundo e me diga como posso te ajudar agora.")
+        Log.e(TAG, "Todos os modelos da cascata falharam. Causa raiz: ${lastException?.message}", lastException)
+        emit("Estou aqui com você. Houve uma oscilação na rede, mas não se preocupe: você não está sozinho(a). Respire fundo... puxe o ar pelo nariz contando até 4, segure por 7 e solte devagar contando até 8. Me diga como está se sentindo agora.")
 
     }.flowOn(Dispatchers.IO)
 
     override fun resetChat() {
         chatSession = null
-        activeModelIndex = 0
+        activeModelName = null
         rateLimiter.reset()
     }
 }

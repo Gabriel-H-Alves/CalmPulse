@@ -168,7 +168,7 @@ fun ChatScreen(
         mutableStateOf(prefs.getString("tts_speech_rate", "1.0x") ?: "1.0x")
     }
     var aiModel by remember {
-        mutableStateOf(prefs.getString("selected_ai_model", "Gemini 2.5 Flash") ?: "Gemini 2.5 Flash")
+        mutableStateOf(prefs.getString("selected_ai_model", "Flash Lite (Recomendado)") ?: "Flash Lite (Recomendado)")
     }
     var aiTone by remember {
         mutableStateOf(prefs.getString("ai_empathy_tone", "Acolhedor & Empático") ?: "Acolhedor & Empático")
@@ -996,6 +996,9 @@ fun ChatScreen(
                 onSendWithEnterChange = { enabled ->
                     sendWithEnter = enabled
                     prefs.edit().putBoolean("send_with_enter", enabled).apply()
+                },
+                onAutoTtsChange = { enabled ->
+                    autoTts = enabled
                 },
                 onResetChat = {
                     showSettingsSheet = false

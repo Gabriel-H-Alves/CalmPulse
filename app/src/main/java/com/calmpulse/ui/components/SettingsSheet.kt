@@ -139,6 +139,7 @@ fun SettingsSheet(
     onBubbleStyleChange: (String) -> Unit = {},
     onReadReceiptsChange: (Boolean) -> Unit = {},
     onSendWithEnterChange: (Boolean) -> Unit = {},
+    onAutoTtsChange: (Boolean) -> Unit = {},
     onResetChat: () -> Unit,
     onCheckUpdate: () -> Unit,
     onDismiss: () -> Unit,
@@ -188,7 +189,7 @@ fun SettingsSheet(
         mutableStateOf(prefs.getString("tts_rate_label", "0.85x (Sereno)") ?: "0.85x (Sereno)")
     }
     var aiModel by remember {
-        mutableStateOf(prefs.getString("ai_model", "Gemini 2.5 Flash") ?: "Gemini 2.5 Flash")
+        mutableStateOf(prefs.getString("selected_ai_model", "Flash Lite (Recomendado)") ?: "Flash Lite (Recomendado)")
     }
     var aiTone by remember {
         mutableStateOf(prefs.getString("ai_empathy_tone", "Acolhedor & Empático") ?: "Acolhedor & Empático")
@@ -945,6 +946,7 @@ fun SettingsSheet(
                                     onCheckedChange = {
                                         autoTts = it
                                         prefs.edit().putBoolean("auto_tts_enabled", it).apply()
+                                        onAutoTtsChange(it)
                                     },
                                     titleColor = titleColor,
                                     subtitleColor = subtitleColor,
@@ -1034,7 +1036,7 @@ fun SettingsSheet(
                             IosSectionHeader(title = "MOTOR NEURAL", color = headerSectionColor)
                             IosGroupCard(cardBg = cardBg, cardBorder = cardBorder) {
                                 Column(modifier = Modifier.padding(14.dp)) {
-                                    val aiModels = listOf("Gemini 2.5 Flash", "Gemini 1.5 Flash", "Gemini 1.5 Pro")
+                                    val aiModels = listOf("Flash Lite (Recomendado)", "Gemini 3.5 Lite", "Gemini 3.6 Flash")
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1049,7 +1051,7 @@ fun SettingsSheet(
                                                     .weight(1f)
                                                     .clickable {
                                                         aiModel = model
-                                                        prefs.edit().putString("ai_model", model).apply()
+                                                        prefs.edit().putString("selected_ai_model", model).apply()
                                                         onAiModelChange(model)
                                                     }
                                             ) {
@@ -1432,7 +1434,7 @@ fun SettingsSheet(
 
     // Diálogo de Edição do Nome do Assistente Acolhedor
     if (showEditAgentNameDialog) {
-        var tempName by remember { mutableStateOf(agentName) }
+        var tempName by remember(agentName, showEditAgentNameDialog) { mutableStateOf(agentName) }
         AlertDialog(
             onDismissRequest = { showEditAgentNameDialog = false },
             title = { Text("Nome do seu Assistente", fontWeight = FontWeight.Bold) },
