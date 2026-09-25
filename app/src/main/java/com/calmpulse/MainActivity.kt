@@ -25,6 +25,13 @@ import java.io.File
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val startupPrefs = getSharedPreferences("calmpulse_prefs", Context.MODE_PRIVATE)
+        if (startupPrefs.getBoolean("secure_screen_enabled", false)) {
+            window.setFlags(
+                android.view.WindowManager.LayoutParams.FLAG_SECURE,
+                android.view.WindowManager.LayoutParams.FLAG_SECURE
+            )
+        }
         enableEdgeToEdge()
         setContent {
             val context = this@MainActivity
@@ -48,13 +55,13 @@ class MainActivity : ComponentActivity() {
             var currentUpdateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
             var downloadedApk by remember { mutableStateOf<File?>(null) }
 
-            // Verificar atualizações ao iniciar
+            // Verificação silenciosa em segundo plano: não bloqueia nem interrompe o usuário em crise
             LaunchedEffect(Unit) {
                 val update = updateManager.checkForUpdate()
                 if (update != null) {
                     currentUpdateInfo = update
                     updateDialogState = UpdateDialogState.Available(update)
-                    showUpdateDialog = true
+                    // Não forçamos showUpdateDialog = true no início para preservar a tranquilidade imediata do usuário
                 }
             }
 

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -74,19 +75,23 @@ fun BreathingCircle(
     val context = androidx.compose.ui.platform.LocalContext.current
     val hapticHelper = remember { com.calmpulse.util.HapticFeedbackHelper(context) }
     val isDark = MaterialTheme.colorScheme.background == DarkBackground
+    val prefs = remember { context.getSharedPreferences("calmpulse_prefs", android.content.Context.MODE_PRIVATE) }
+    var isVibrationEnabled by remember {
+        mutableStateOf(prefs.getBoolean("haptic_feedback_enabled", true))
+    }
 
     var isRunning by remember { mutableStateOf(isActive) }
     var currentPhase by remember { mutableStateOf(BreathingPhase.INHALE) }
     var secondsRemaining by remember { mutableStateOf(currentPhase.durationSeconds) }
     var cycleCount by remember { mutableStateOf(1) }
 
-    // Ciclo temporal com feedback tátil suave
-    LaunchedEffect(isRunning) {
+    // Ciclo temporal com feedback tátil suave (se ativado)
+    LaunchedEffect(isRunning, isVibrationEnabled) {
         if (!isRunning) return@LaunchedEffect
         while (isRunning) {
             // 1. Inspire (4s)
             currentPhase = BreathingPhase.INHALE
-            hapticHelper.vibrateInhale()
+            if (isVibrationEnabled) hapticHelper.vibrateInhale()
             for (sec in currentPhase.durationSeconds downTo 1) {
                 secondsRemaining = sec
                 delay(1000)
@@ -94,7 +99,7 @@ fun BreathingCircle(
 
             // 2. Segure (7s)
             currentPhase = BreathingPhase.HOLD
-            hapticHelper.vibrateHold()
+            if (isVibrationEnabled) hapticHelper.vibrateHold()
             for (sec in currentPhase.durationSeconds downTo 1) {
                 secondsRemaining = sec
                 delay(1000)
@@ -102,7 +107,7 @@ fun BreathingCircle(
 
             // 3. Expire (8s)
             currentPhase = BreathingPhase.EXHALE
-            hapticHelper.vibrateExhale()
+            if (isVibrationEnabled) hapticHelper.vibrateExhale()
             for (sec in currentPhase.durationSeconds downTo 1) {
                 secondsRemaining = sec
                 delay(1000)
@@ -340,6 +345,29 @@ fun BreathingCircle(
                     contentDescription = if (isRunning) "Pausar" else "Continuar",
                     tint = WhatsAppGreen,
                     modifier = Modifier.size(24.dp)
+                )
+            }
+
+            // Botão de Alternar Vibração Sensorial (Haptics On/Off)
+            IconButton(
+                onClick = {
+                    val newState = !isVibrationEnabled
+                    isVibrationEnabled = newState
+                    prefs.edit().putBoolean("haptic_feedback_enabled", newState).apply()
+                },
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isVibrationEnabled) WhatsAppGreen.copy(alpha = 0.18f)
+                        else if (isDark) Color(0xFF1F2C34) else Color(0xFFE2E8F0)
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Vibration,
+                    contentDescription = if (isVibrationEnabled) "Desativar vibração sensorial" else "Ativar vibração sensorial",
+                    tint = if (isVibrationEnabled) WhatsAppGreen else if (isDark) Color(0xFF8696A0) else Color(0xFF667781),
+                    modifier = Modifier.size(22.dp)
                 )
             }
 

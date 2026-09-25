@@ -5,7 +5,7 @@ package com.calmpulse.security
  */
 object InputSanitizer {
 
-    const val MAX_PROMPT_LENGTH = 500
+    const val MAX_PROMPT_LENGTH = 2500
 
     private val SUSPICIOUS_PROMPT_PATTERNS = listOf(
         Regex("(?i)ignore (all )?previous instructions"),
@@ -45,7 +45,6 @@ object InputSanitizer {
      * Retorna true se a mensagem for segura, false se contiver tentativas de sequestro de instrução.
      */
     fun isSafe(input: String): Boolean {
-        if (input.length > MAX_PROMPT_LENGTH) return false
         for (pattern in SUSPICIOUS_PROMPT_PATTERNS) {
             if (pattern.containsMatchIn(input)) {
                 return false

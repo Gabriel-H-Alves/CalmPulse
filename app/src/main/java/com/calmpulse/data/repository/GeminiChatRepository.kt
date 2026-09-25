@@ -30,8 +30,9 @@ class GeminiChatRepository(
 
         // Cascata de modelos em ordem de prioridade
         val CANDIDATE_MODELS = listOf(
-            "gemini-3.6-flash",
-            "gemini-3.5-flash",
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash",
             "gemini-flash-latest"
         )
         private const val MAX_RETRIES_PER_MODEL = 2
@@ -39,13 +40,23 @@ class GeminiChatRepository(
 
     private var activeModelIndex = 0
     private var chatSession: Chat? = null
+    private var currentAgentName: String = "CalmPulse"
+
+    override fun setAgentName(name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isNotBlank() && trimmed != currentAgentName) {
+            currentAgentName = trimmed
+            // Reseta a sessão para que o novo prompt com o nome do agente seja adotado imediatamente
+            chatSession = null
+        }
+    }
 
     private fun createGenerativeModel(modelName: String): GenerativeModel {
         return GenerativeModel(
             modelName = modelName,
             apiKey = BuildConfig.GEMINI_API_KEY,
             systemInstruction = com.google.ai.client.generativeai.type.content {
-                text(SystemPrompt.CALM_PULSE_INSTRUCTION)
+                text(SystemPrompt.getInstruction(currentAgentName))
             }
         )
     }

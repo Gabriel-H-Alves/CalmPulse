@@ -125,6 +125,8 @@ enum class SettingsScope {
 @Composable
 fun SettingsSheet(
     isDarkTheme: Boolean,
+    agentName: String = "CalmPulse",
+    onAgentNameChange: (String) -> Unit = {},
     onToggleTheme: () -> Unit,
     onResetChat: () -> Unit,
     onCheckUpdate: () -> Unit,
@@ -144,11 +146,12 @@ fun SettingsSheet(
 
     // Estados persistentes no SharedPreferences
     var userName by remember {
-        mutableStateOf(prefs.getString("user_name", "Gabriel Alves") ?: "Gabriel Alves")
+        mutableStateOf(prefs.getString("user_name", "Você") ?: "Você")
     }
     var userStatus by remember {
         mutableStateOf(prefs.getString("user_status", "Vivendo um dia de cada vez 🌿") ?: "Vivendo um dia de cada vez 🌿")
     }
+    var showEditAgentNameDialog by remember { mutableStateOf(false) }
     var biometricLock by remember {
         mutableStateOf(prefs.getBoolean("biometric_lock_enabled", false))
     }
@@ -467,6 +470,63 @@ fun SettingsSheet(
                                         contentDescription = null,
                                         tint = subtitleColor.copy(alpha = 0.45f),
                                         modifier = Modifier.size(13.dp)
+                                    )
+                                }
+                            }
+
+                            // ── CARD DO ASSISTENTE ACOLHEDOR PERSONALIZÁVEL ──
+                            Card(
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = cardBg),
+                                border = cardBorder,
+                                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 16.dp)
+                                    .clickable { showEditAgentNameDialog = true }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(46.dp)
+                                            .clip(CircleShape)
+                                            .background(WhatsAppGreen.copy(alpha = 0.16f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Spa,
+                                            contentDescription = null,
+                                            tint = WhatsAppGreen,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.width(14.dp))
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Assistente: $agentName",
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = titleColor
+                                        )
+                                        Text(
+                                            text = "Toque para alterar o nome do seu agente",
+                                            fontSize = 12.sp,
+                                            color = subtitleColor
+                                        )
+                                    }
+
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Editar nome",
+                                        tint = subtitleColor,
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
                             }
@@ -1311,6 +1371,51 @@ fun SettingsSheet(
             confirmButton = {
                 TextButton(onClick = { showGroundingHelpDialog = false }) {
                     Text("Entendido", color = activeAccent, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    // Diálogo de Edição do Nome do Assistente Acolhedor
+    if (showEditAgentNameDialog) {
+        var tempName by remember { mutableStateOf(agentName) }
+        AlertDialog(
+            onDismissRequest = { showEditAgentNameDialog = false },
+            title = { Text("Nome do seu Assistente", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        text = "Escolha um nome acolhedor para te ouvir e acalmar (ex: Julinha, Sofia, Amigo, etc.):",
+                        fontSize = 13.5.sp,
+                        color = subtitleColor
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = tempName,
+                        onValueChange = { tempName = it },
+                        singleLine = true,
+                        label = { Text("Nome do Assistente") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val clean = tempName.trim()
+                        if (clean.isNotBlank()) {
+                            onAgentNameChange(clean)
+                            Toast.makeText(context, "Nome atualizado para $clean!", Toast.LENGTH_SHORT).show()
+                        }
+                        showEditAgentNameDialog = false
+                    }
+                ) {
+                    Text("Salvar", color = WhatsAppGreen, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditAgentNameDialog = false }) {
+                    Text("Cancelar")
                 }
             }
         )

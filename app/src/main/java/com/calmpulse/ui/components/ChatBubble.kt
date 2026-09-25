@@ -63,11 +63,12 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Balão de mensagem oficial estilo WhatsApp iOS 2025 com suporte ao Meta AI.
+ * Balão de mensagem com estética serena, alvos de toque acessíveis e suporte a nome personalizado.
  */
 @Composable
 fun ChatBubble(
     message: ChatMessage,
+    agentName: String = "CalmPulse",
     isSpeakingThisMessage: Boolean = false,
     onSpeakClick: (String) -> Unit = {},
     onStopSpeakClick: () -> Unit = {}
@@ -87,7 +88,7 @@ fun ChatBubble(
         }
     }
 
-    // Cores de fundo dos balões WhatsApp iOS 2025
+    // Cores de fundo dos balões
     val bubbleColor = if (isUser) {
         if (isDark) DarkChatBubbleUser else WhatsAppUserBubbleLight
     } else {
@@ -102,7 +103,7 @@ fun ChatBubble(
         timeFormat.format(Date(message.timestamp))
     }
 
-    // Formato com cantos arredondados clássicos do WhatsApp iOS
+    // Formato com cantos arredondados suaves
     val bubbleShape = if (isUser) {
         RoundedCornerShape(
             topStart = 16.dp,
@@ -139,10 +140,11 @@ fun ChatBubble(
                 )
                 .clip(bubbleShape)
                 .background(bubbleColor)
+                .clickable { /* Clique rápido neutro */ }
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Column {
-                // Cabeçalho discreto da IA com o anel Meta AI
+                // Cabeçalho acolhedor com o nome personalizado do agente
                 if (!isUser) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -155,17 +157,17 @@ fun ChatBubble(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Meta AI • CalmPulse",
+                            text = agentName,
                             style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,
-                                fontSize = 11.5.sp
+                                fontSize = 12.sp
                             )
                         )
                     }
                 }
 
-                // Conteúdo da Mensagem ou Animação de Streaming
+                // Conteúdo da Mensagem ou Animação de Digitação
                 if (message.text.isBlank() && message.isStreaming) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -174,7 +176,7 @@ fun ChatBubble(
                         TypingDotsIndicator(color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "digitando...",
+                            text = "acolhendo...",
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 color = timeColor,
                                 fontSize = 13.sp
@@ -192,42 +194,54 @@ fun ChatBubble(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(3.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
-                // Rodapé do balão: Horário, Ações de Áudio (TTS) e Checks duplos
+                // Rodapé do balão: Ações táteis acessíveis (mínimo 34-40dp), Horário e Status
                 Row(
                     modifier = Modifier.align(Alignment.End),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Botão Copiar Texto para respostas da IA
-                    if (!isUser && message.text.isNotBlank() && !message.isStreaming) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Copiar mensagem",
-                            tint = timeColor.copy(alpha = 0.75f),
+                    // Botão Copiar Texto (com touch target confortável)
+                    if (message.text.isNotBlank() && !message.isStreaming) {
+                        Box(
                             modifier = Modifier
-                                .size(14.dp)
-                                .clickable { copyAction() }
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .clickable { copyAction() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = "Copiar mensagem",
+                                tint = timeColor.copy(alpha = 0.85f),
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
                     }
 
-                    // Botão de Áudio (TTS) para respostas da IA
+                    // Botão de Áudio (TTS) para respostas do agente
                     if (!isUser && message.text.isNotBlank() && !message.isStreaming) {
-                        Icon(
-                            imageVector = if (isSpeakingThisMessage) Icons.AutoMirrored.Filled.VolumeMute else Icons.AutoMirrored.Filled.VolumeUp,
-                            contentDescription = if (isSpeakingThisMessage) "Mutar áudio" else "Ouvir áudio",
-                            tint = MaterialTheme.colorScheme.primary,
+                        Box(
                             modifier = Modifier
-                                .size(16.dp)
+                                .size(34.dp)
+                                .clip(CircleShape)
                                 .clickable {
                                     if (isSpeakingThisMessage) onStopSpeakClick() else onSpeakClick(message.text)
-                                }
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isSpeakingThisMessage) Icons.AutoMirrored.Filled.VolumeMute else Icons.AutoMirrored.Filled.VolumeUp,
+                                contentDescription = if (isSpeakingThisMessage) "Mutar áudio" else "Ouvir áudio",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
                     }
 
-                    // Carimbo de horário WhatsApp
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    // Carimbo de horário sereno
                     Text(
                         text = formattedTime,
                         style = MaterialTheme.typography.labelSmall.copy(
@@ -236,14 +250,14 @@ fun ChatBubble(
                         )
                     )
 
-                    // Checks duplos azuis do WhatsApp iOS para mensagens enviadas
+                    // Indicador discreto de envio do usuário
                     if (isUser) {
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
                             imageVector = Icons.Default.DoneAll,
-                            contentDescription = "Mensagem lida",
-                            tint = WhatsAppBlueCheck,
-                            modifier = Modifier.size(15.dp)
+                            contentDescription = "Mensagem enviada",
+                            tint = timeColor.copy(alpha = 0.7f),
+                            modifier = Modifier.size(14.dp)
                         )
                     }
                 }

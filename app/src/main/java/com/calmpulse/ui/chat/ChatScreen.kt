@@ -290,7 +290,7 @@ fun ChatScreen(
                         Column {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "CalmPulse",
+                                    text = uiState.agentName,
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.Bold,
                                         color = primaryText,
@@ -308,9 +308,9 @@ fun ChatScreen(
                             Text(
                                 text = when {
                                     isListening -> "Ouvindo com calma..."
-                                    uiState.isStreaming -> "digitando..."
+                                    uiState.isStreaming -> "digitando com carinho..."
                                     isSpeaking -> "Falando agora..."
-                                    else -> "com Meta AI • online"
+                                    else -> "apoio sereno • online"
                                 },
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     color = if (isListening || uiState.isStreaming) WhatsAppGreen else secondaryText,
@@ -546,8 +546,6 @@ fun ChatScreen(
                                                 recognizer.cancelListening()
                                                 if (textToSend.isNotBlank()) {
                                                     viewModel.sendMessage(textToSend)
-                                                } else {
-                                                    viewModel.sendMessage("🎤 (Mensagem de voz compartilhada)")
                                                 }
                                             },
                                         contentAlignment = Alignment.Center
@@ -739,7 +737,7 @@ fun ChatScreen(
                                         Spacer(modifier = Modifier.height(14.dp))
 
                                         Text(
-                                            text = "CalmPulse com Meta AI",
+                                            text = uiState.agentName,
                                             style = MaterialTheme.typography.titleMedium.copy(
                                                 fontWeight = FontWeight.Bold,
                                                 color = primaryText
@@ -749,7 +747,7 @@ fun ChatScreen(
                                         Spacer(modifier = Modifier.height(6.dp))
 
                                         Text(
-                                            text = "Olá. Estou aqui para te ouvir sem julgamentos.\nDigite ou grave sua voz como se sentir mais à vontade.",
+                                            text = "Olá. Estou aqui para te ouvir sem pressa e sem julgamentos.\nDigite, grave sua voz ou sinta-se à vontade para me dar um nome que te traga paz.",
                                             style = MaterialTheme.typography.bodyMedium.copy(
                                                 color = secondaryText,
                                                 lineHeight = 22.sp
@@ -759,7 +757,7 @@ fun ChatScreen(
 
                                         Spacer(modifier = Modifier.height(16.dp))
 
-                                        // Badge de segurança e acolhimento WhatsApp
+                                        // Badge de segurança e acolhimento
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(8.dp))
@@ -793,6 +791,7 @@ fun ChatScreen(
                             items(uiState.messages, key = { it.id }) { message ->
                                 ChatBubble(
                                     message = message,
+                                    agentName = uiState.agentName,
                                     isSpeakingThisMessage = currentSpokenText == message.text && isSpeaking,
                                     onSpeakClick = { text ->
                                         currentSpokenText = text
@@ -858,6 +857,8 @@ fun ChatScreen(
         if (showSettingsSheet) {
             SettingsSheet(
                 isDarkTheme = isDarkTheme,
+                agentName = uiState.agentName,
+                onAgentNameChange = viewModel::updateAgentName,
                 onToggleTheme = onToggleTheme,
                 onResetChat = {
                     showSettingsSheet = false

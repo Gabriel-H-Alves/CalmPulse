@@ -1,12 +1,15 @@
 package com.calmpulse.ui.chat
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.content.Context
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.calmpulse.data.model.ChatMessage
 import com.calmpulse.data.model.MessageSender
 import com.calmpulse.data.repository.GeminiChatRepository
 import com.calmpulse.domain.repository.ChatRepository
 import com.calmpulse.security.RateLimitException
+import com.calmpulse.util.AgentNameDetector
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,15 +21,36 @@ data class ChatUiState(
     val messages: List<ChatMessage> = emptyList(),
     val isStreaming: Boolean = false,
     val inputText: String = "",
-    val userFeedbackMessage: String? = null
+    val userFeedbackMessage: String? = null,
+    val agentName: String = "CalmPulse"
 )
 
 class ChatViewModel(
+    application: Application,
     private val repository: ChatRepository = GeminiChatRepository()
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
-    private val _uiState = MutableStateFlow(ChatUiState())
+    private val prefs = application.getSharedPreferences("calmpulse_prefs", Context.MODE_PRIVATE)
+
+    private val _uiState = MutableStateFlow(
+        ChatUiState(
+            agentName = prefs.getString("agent_name", "CalmPulse") ?: "CalmPulse"
+        )
+    )
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
+
+    init {
+        repository.setAgentName(_uiState.value.agentName)
+    }
+
+    fun updateAgentName(newName: String) {
+        val trimmed = newName.trim()
+        if (trimmed.isNotBlank()) {
+            prefs.edit().putString("agent_name", trimmed).apply()
+            repository.setAgentName(trimmed)
+            _uiState.update { it.copy(agentName = trimmed) }
+        }
+    }
 
     fun onInputTextChanged(newText: String) {
         _uiState.update { it.copy(inputText = newText) }
@@ -40,7 +64,16 @@ class ChatViewModel(
         val trimmed = userText.trim()
         if (trimmed.isBlank() || _uiState.value.isStreaming) return
 
-        // 1. Cria a mensagem do usuário
+        // Verifica se o usuário expressou o desejo de nomear ou renomear o agente
+        val detectedName = AgentNameDetector.detectName(trimmed)
+        val promptForAi = if (detectedName != null) {
+            updateAgentName(detectedName)
+            "$trimmed\n[Contexto: O usuário acabou de te batizar com o nome \"$detectedName\". Acolha esse gesto com muito carinho, valide o novo nome e confirme que adorou ser chamado(a) de $detectedName.]"
+        } else {
+            trimmed
+        }
+
+        // 1. Cria a mensagem do usuário com o texto original
         val userMessage = ChatMessage(
             text = trimmed,
             sender = MessageSender.USER
@@ -66,7 +99,7 @@ class ChatViewModel(
         // 4. Inicia a coleta do streaming na Coroutine do ViewModel
         viewModelScope.launch {
             try {
-                repository.sendMessageStream(trimmed)
+                repository.sendMessageStream(promptForAi)
                     .catch { error ->
                         if (error is RateLimitException) {
                             // Remove a mensagem de IA vazia e mostra o feedback suave

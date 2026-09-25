@@ -104,9 +104,23 @@ class VoiceRecognizer(
 
                         override fun onError(error: Int) {
                             Log.w(TAG, "SpeechRecognizer onError código: $error (latest: '$latestPartialText')")
-                            // Preserva a transcrição já capturada para envio manual do usuário
-                            if (latestPartialText.isNotBlank()) {
-                                this@VoiceRecognizer.onResult(latestPartialText)
+                            isCurrentlyListening = false
+                            this@VoiceRecognizer.onListeningStateChanged(false)
+                            val textToSend = latestPartialText.trim()
+                            cleanUpRecognizer()
+
+                            // Preserva a transcrição já capturada para envio, se houver
+                            if (textToSend.isNotBlank()) {
+                                this@VoiceRecognizer.onResult(textToSend)
+                            } else {
+                                val friendlyMsg = when (error) {
+                                    SpeechRecognizer.ERROR_NO_MATCH -> "Não consegui te ouvir com clareza. Fale novamente ou digite."
+                                    SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Pausa longa detectada. Fale quando estiver à vontade."
+                                    SpeechRecognizer.ERROR_AUDIO -> "Problema momentâneo no áudio. Tente novamente."
+                                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Permissão de microfone necessária para acolhimento por voz."
+                                    else -> "Gravação finalizada. Fale de novo ou digite sua mensagem."
+                                }
+                                this@VoiceRecognizer.onError(friendlyMsg)
                             }
                         }
 

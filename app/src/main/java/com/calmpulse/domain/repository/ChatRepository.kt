@@ -17,4 +17,9 @@ interface ChatRepository {
      * Reinicia o contexto da sessão para um novo ciclo de acolhimento.
      */
     fun resetChat()
+
+    /**
+     * Atualiza o nome do agente para personalização afetiva do usuário.
+     */
+    fun setAgentName(name: String) {}
 }
