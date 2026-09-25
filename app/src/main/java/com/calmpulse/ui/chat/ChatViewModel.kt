@@ -1,8 +1,6 @@
 package com.calmpulse.ui.chat
 
-import android.app.Application
-import android.content.Context
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.calmpulse.data.model.ChatMessage
 import com.calmpulse.data.model.MessageSender
@@ -26,29 +24,32 @@ data class ChatUiState(
 )
 
 class ChatViewModel(
-    application: Application,
     private val repository: ChatRepository = GeminiChatRepository()
-) : AndroidViewModel(application) {
+) : ViewModel() {
 
-    private val prefs = application.getSharedPreferences("calmpulse_prefs", Context.MODE_PRIVATE)
-
-    private val _uiState = MutableStateFlow(
-        ChatUiState(
-            agentName = prefs.getString("agent_name", "CalmPulse") ?: "CalmPulse"
-        )
-    )
+    private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
+
+    var onPersistAgentName: ((String) -> Unit)? = null
 
     init {
         repository.setAgentName(_uiState.value.agentName)
     }
 
+    fun initAgentName(savedName: String) {
+        val trimmed = savedName.trim()
+        if (trimmed.isNotBlank() && _uiState.value.agentName != trimmed) {
+            repository.setAgentName(trimmed)
+            _uiState.update { it.copy(agentName = trimmed) }
+        }
+    }
+
     fun updateAgentName(newName: String) {
         val trimmed = newName.trim()
         if (trimmed.isNotBlank()) {
-            prefs.edit().putString("agent_name", trimmed).apply()
             repository.setAgentName(trimmed)
             _uiState.update { it.copy(agentName = trimmed) }
+            onPersistAgentName?.invoke(trimmed)
         }
     }
 

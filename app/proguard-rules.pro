@@ -30,7 +30,15 @@
 -dontwarn okio.**
 -keep class okhttp3.** { *; }
 
-# 6. Otimizações de Bytecode
--repackageclasses ''
--allowaccessmodification
+# 6. Preservar ViewModels instanciados por reflexão no Jetpack Compose
+-keep class * extends androidx.lifecycle.ViewModel {
+    <init>(...);
+}
+-keep class com.calmpulse.ui.chat.ChatViewModel {
+    <init>(...);
+    *;
+}
+-keep class com.calmpulse.util.AgentNameDetector { *; }
+-keep class com.calmpulse.audio.** { *; }
+
 

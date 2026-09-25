@@ -126,8 +126,23 @@ fun ChatScreen(
     onCheckUpdate: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("calmpulse_prefs", android.content.Context.MODE_PRIVATE) }
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
+
+    LaunchedEffect(Unit) {
+        val savedAgentName = prefs.getString("agent_name", "CalmPulse") ?: "CalmPulse"
+        viewModel.initAgentName(savedAgentName)
+    }
+
+    DisposableEffect(Unit) {
+        viewModel.onPersistAgentName = { name ->
+            prefs.edit().putString("agent_name", name).apply()
+        }
+        onDispose {
+            viewModel.onPersistAgentName = null
+        }
+    }
 
     var selectedTab by remember { mutableStateOf(CalmPulseTab.CHAT) }
     var isListening by remember { mutableStateOf(false) }
