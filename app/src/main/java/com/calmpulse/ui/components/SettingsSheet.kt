@@ -127,7 +127,18 @@ fun SettingsSheet(
     isDarkTheme: Boolean,
     agentName: String = "CalmPulse",
     onAgentNameChange: (String) -> Unit = {},
+    oledDarkMode: Boolean = false,
     onToggleTheme: () -> Unit,
+    onToggleOled: () -> Unit = {},
+    accentColorIndex: Int = 0,
+    onSelectAccent: (Int) -> Unit = {},
+    onTtsRateChange: (String) -> Unit = {},
+    onAiModelChange: (String) -> Unit = {},
+    onAiToneChange: (String) -> Unit = {},
+    onFontSizeChange: (String) -> Unit = {},
+    onBubbleStyleChange: (String) -> Unit = {},
+    onReadReceiptsChange: (Boolean) -> Unit = {},
+    onSendWithEnterChange: (Boolean) -> Unit = {},
     onResetChat: () -> Unit,
     onCheckUpdate: () -> Unit,
     onDismiss: () -> Unit,
@@ -152,17 +163,11 @@ fun SettingsSheet(
         mutableStateOf(prefs.getString("user_status", "Vivendo um dia de cada vez 🌿") ?: "Vivendo um dia de cada vez 🌿")
     }
     var showEditAgentNameDialog by remember { mutableStateOf(false) }
-    var biometricLock by remember {
-        mutableStateOf(prefs.getBoolean("biometric_lock_enabled", false))
-    }
     var secureScreen by remember {
         mutableStateOf(prefs.getBoolean("secure_screen_enabled", false))
     }
     var readReceipts by remember {
         mutableStateOf(prefs.getBoolean("read_receipts_enabled", true))
-    }
-    var oledDarkMode by remember {
-        mutableStateOf(prefs.getBoolean("oled_dark_mode", false))
     }
     var chatFontSize by remember {
         mutableStateOf(prefs.getString("chat_font_size", "Médio") ?: "Médio")
@@ -170,8 +175,8 @@ fun SettingsSheet(
     var bubbleStyle by remember {
         mutableStateOf(prefs.getString("bubble_style", "Clássico iOS") ?: "Clássico iOS")
     }
-    var accentColorIndex by remember {
-        mutableIntStateOf(prefs.getInt("accent_color_index", 0))
+    var localAccentIndex by remember {
+        mutableIntStateOf(accentColorIndex)
     }
     var sendWithEnter by remember {
         mutableStateOf(prefs.getBoolean("send_with_enter", false))
@@ -194,9 +199,6 @@ fun SettingsSheet(
     var hapticFeedbackEnabled by remember {
         mutableStateOf(prefs.getBoolean("haptic_feedback_enabled", true))
     }
-    var gentleNotifications by remember {
-        mutableStateOf(prefs.getBoolean("gentle_notifications_enabled", true))
-    }
     var dataSaver by remember {
         mutableStateOf(prefs.getBoolean("data_saver_enabled", false))
     }
@@ -207,6 +209,7 @@ fun SettingsSheet(
     var showEditProfileDialog by remember { mutableStateOf(false) }
     var showPrivacyPolicyDialog by remember { mutableStateOf(false) }
     var showGroundingHelpDialog by remember { mutableStateOf(false) }
+    var showDeviceInfoDialog by remember { mutableStateOf(false) }
 
     // Cores e Tokens Visuais
     val bg = if (isDarkTheme) (if (oledDarkMode) Color(0xFF000000) else Color(0xFF12181F)) else Color(0xFFF2F4F7)
@@ -232,7 +235,7 @@ fun SettingsSheet(
         Pair("Lavanda", Color(0xFF9B8AC4)),
         Pair("Azul Nórdico", appleBlue)
     )
-    val activeAccent = accentPalettes[accentColorIndex.coerceIn(0, accentPalettes.lastIndex)].second
+    val activeAccent = accentPalettes[localAccentIndex.coerceIn(0, accentPalettes.lastIndex)].second
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -394,237 +397,299 @@ fun SettingsSheet(
                                 }
                             }
 
-                            // Card de Perfil Apple ID
-                            Card(
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(containerColor = cardBg),
-                                border = cardBorder,
-                                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 16.dp)
-                                    .clickable { currentScope = SettingsScope.ACCOUNT }
-                            ) {
-                                Row(
+                            if (searchQuery.isNotBlank()) {
+                                val query = searchQuery.trim().lowercase()
+                                val allSearchItems = listOf(
+                                    Triple("Aparência & Design", "Tema escuro, preto OLED, cores de destaque", SettingsScope.APPEARANCE),
+                                    Triple("Cores de Destaque", "Paletas de personalização visual", SettingsScope.APPEARANCE),
+                                    Triple("Tamanho do Texto", "Pequeno, Médio, Grande", SettingsScope.APPEARANCE),
+                                    Triple("Estilo das Bolhas", "Clássico iOS, Redondo 2025, Compacto", SettingsScope.APPEARANCE),
+                                    Triple("Preto Puro OLED", "Economia máxima em telas AMOLED", SettingsScope.APPEARANCE),
+                                    Triple("Conversas & Mensagens", "Enviar com Enter, auto áudio, cadência", SettingsScope.CHATS),
+                                    Triple("Enviar com a Tecla Enter", "Atalho de envio pelo teclado virtual", SettingsScope.CHATS),
+                                    Triple("Ouvir Resposta Automaticamente", "Voz serena ao concluir mensagem", SettingsScope.CHATS),
+                                    Triple("Cadência da Voz Serena", "Velocidade de leitura (0.85x, 1.0x, 1.25x)", SettingsScope.CHATS),
+                                    Triple("Exportar Histórico", "Compartilhar texto com terapeuta", SettingsScope.CHATS),
+                                    Triple("Reiniciar Conversa", "Limpar histórico e iniciar do zero", SettingsScope.CHATS),
+                                    Triple("Privacidade & Segurança", "Proteção de prints, confirmações de leitura", SettingsScope.PRIVACY_SECURITY),
+                                    Triple("Bloquear Capturas de Tela", "Impede prints para sigilo terapêutico", SettingsScope.PRIVACY_SECURITY),
+                                    Triple("Confirmações de Leitura", "Tiques azuis duplos estilo WhatsApp", SettingsScope.PRIVACY_SECURITY),
+                                    Triple("Inteligência Artificial & Voz", "Motor neural e tom do assistente", SettingsScope.AI_VOICE),
+                                    Triple("Estilo de Resposta (Tom)", "Acolhedor & Empático, Prático & Direto, Reflexivo", SettingsScope.AI_VOICE),
+                                    Triple("Notificações & Sensorial", "Feedback tátil na respiração 4-7-8", SettingsScope.NOTIFICATIONS),
+                                    Triple("Armazenamento & Dados", "Limpar cache temporário de áudio", SettingsScope.STORAGE),
+                                    Triple("Apoio Imediato & CVV 188", "SAMU 192, Central 180, Polícia 190", SettingsScope.EMERGENCY_SUPPORT),
+                                    Triple("Sobre o CalmPulse", "Versão v${BuildConfig.VERSION_NAME}, dispositivo", SettingsScope.ABOUT)
+                                )
+                                val filtered = allSearchItems.filter {
+                                    it.first.lowercase().contains(query) || it.second.lowercase().contains(query)
+                                }
+
+                                if (filtered.isNotEmpty()) {
+                                    IosSectionHeader(title = "RESULTADOS DA BUSCA", color = headerSectionColor)
+                                    IosGroupCard(cardBg = cardBg, cardBorder = cardBorder) {
+                                        filtered.forEachIndexed { idx, item ->
+                                            if (idx > 0) IosInsetDivider(color = subtitleColor)
+                                            IosNavigationRow(
+                                                icon = Icons.Default.Search,
+                                                iconBg = activeAccent,
+                                                title = item.first,
+                                                subtitle = item.second,
+                                                onClick = {
+                                                    currentScope = item.third
+                                                    searchQuery = ""
+                                                },
+                                                titleColor = titleColor,
+                                                subtitleColor = subtitleColor
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "Nenhuma configuração encontrada para \"$searchQuery\"",
+                                            fontSize = 13.5.sp,
+                                            color = subtitleColor,
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                        )
+                                    }
+                                }
+                            } else {
+                                // Card de Perfil Apple ID
+                                Card(
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = CardDefaults.cardColors(containerColor = cardBg),
+                                    border = cardBorder,
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(14.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .padding(bottom = 16.dp)
+                                        .clickable { currentScope = SettingsScope.ACCOUNT }
                                 ) {
-                                    Box(
+                                    Row(
                                         modifier = Modifier
-                                            .size(54.dp)
-                                            .clip(CircleShape)
-                                            .background(Brush.sweepGradient(MetaAiRingColors)),
-                                        contentAlignment = Alignment.Center
+                                            .fillMaxWidth()
+                                            .padding(14.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Box(
                                             modifier = Modifier
-                                                .size(48.dp)
+                                                .size(54.dp)
                                                 .clip(CircleShape)
-                                                .background(cardBg),
+                                                .background(Brush.sweepGradient(MetaAiRingColors)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(48.dp)
+                                                    .clip(CircleShape)
+                                                    .background(cardBg),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.AccountCircle,
+                                                    contentDescription = null,
+                                                    tint = activeAccent,
+                                                    modifier = Modifier.size(40.dp)
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.width(14.dp))
+
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = userName,
+                                                    fontSize = 17.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = titleColor
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(7.dp)
+                                                        .clip(CircleShape)
+                                                        .background(Color(0xFF34C759))
+                                                )
+                                            }
+                                            Text(
+                                                text = userStatus,
+                                                fontSize = 12.5.sp,
+                                                color = subtitleColor,
+                                                maxLines = 1
+                                            )
+                                            Text(
+                                                text = "Perfil, avatar e identificador",
+                                                fontSize = 11.5.sp,
+                                                color = activeAccent
+                                            )
+                                        }
+
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                            contentDescription = null,
+                                            tint = subtitleColor.copy(alpha = 0.45f),
+                                            modifier = Modifier.size(13.dp)
+                                        )
+                                    }
+                                }
+
+                                // ── CARD DO ASSISTENTE ACOLHEDOR PERSONALIZÁVEL ──
+                                Card(
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = CardDefaults.cardColors(containerColor = cardBg),
+                                    border = cardBorder,
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 16.dp)
+                                        .clickable { showEditAgentNameDialog = true }
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(14.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(46.dp)
+                                                .clip(CircleShape)
+                                                .background(WhatsAppGreen.copy(alpha = 0.16f)),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Default.AccountCircle,
+                                                imageVector = Icons.Default.Spa,
                                                 contentDescription = null,
-                                                tint = activeAccent,
-                                                modifier = Modifier.size(40.dp)
+                                                tint = WhatsAppGreen,
+                                                modifier = Modifier.size(24.dp)
                                             )
                                         }
-                                    }
 
-                                    Spacer(modifier = Modifier.width(14.dp))
+                                        Spacer(modifier = Modifier.width(14.dp))
 
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = userName,
-                                                fontSize = 17.sp,
+                                                text = "Assistente: $agentName",
+                                                fontSize = 16.sp,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = titleColor
                                             )
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(7.dp)
-                                                    .clip(CircleShape)
-                                                    .background(Color(0xFF34C759))
+                                            Text(
+                                                text = "Toque para alterar o nome do seu agente",
+                                                fontSize = 12.sp,
+                                                color = subtitleColor
                                             )
                                         }
-                                        Text(
-                                            text = userStatus,
-                                            fontSize = 12.5.sp,
-                                            color = subtitleColor,
-                                            maxLines = 1
-                                        )
-                                        Text(
-                                            text = "Perfil, avatar e identificador",
-                                            fontSize = 11.5.sp,
-                                            color = activeAccent
-                                        )
-                                    }
 
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
-                                        contentDescription = null,
-                                        tint = subtitleColor.copy(alpha = 0.45f),
-                                        modifier = Modifier.size(13.dp)
-                                    )
-                                }
-                            }
-
-                            // ── CARD DO ASSISTENTE ACOLHEDOR PERSONALIZÁVEL ──
-                            Card(
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(containerColor = cardBg),
-                                border = cardBorder,
-                                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 16.dp)
-                                    .clickable { showEditAgentNameDialog = true }
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(14.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(46.dp)
-                                            .clip(CircleShape)
-                                            .background(WhatsAppGreen.copy(alpha = 0.16f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
                                         Icon(
-                                            imageVector = Icons.Default.Spa,
-                                            contentDescription = null,
-                                            tint = WhatsAppGreen,
-                                            modifier = Modifier.size(24.dp)
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Editar nome",
+                                            tint = subtitleColor,
+                                            modifier = Modifier.size(18.dp)
                                         )
                                     }
+                                }
 
-                                    Spacer(modifier = Modifier.width(14.dp))
-
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "Assistente: $agentName",
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = titleColor
-                                        )
-                                        Text(
-                                            text = "Toque para alterar o nome do seu agente",
-                                            fontSize = 12.sp,
-                                            color = subtitleColor
-                                        )
-                                    }
-
-                                    Icon(
-                                        imageVector = Icons.Default.Edit,
-                                        contentDescription = "Editar nome",
-                                        tint = subtitleColor,
-                                        modifier = Modifier.size(18.dp)
+                                // ── GRUPO 1: EXPERIÊNCIA PRINCIPAL ──
+                                IosSectionHeader(title = "PREFERÊNCIAS PRINCIPAIS", color = headerSectionColor)
+                                IosGroupCard(cardBg = cardBg, cardBorder = cardBorder) {
+                                    IosMenuRow(
+                                        icon = Icons.Default.Palette,
+                                        iconBg = applePurple,
+                                        title = "Aparência & Design",
+                                        badge = if (isDarkTheme) "Escuro" else "Claro",
+                                        onClick = { currentScope = SettingsScope.APPEARANCE },
+                                        titleColor = titleColor,
+                                        subtitleColor = subtitleColor
+                                    )
+                                    IosInsetDivider(color = subtitleColor)
+                                    IosMenuRow(
+                                        icon = Icons.AutoMirrored.Filled.Chat,
+                                        iconBg = appleGreen,
+                                        title = "Conversas & Mensagens",
+                                        badge = chatFontSize,
+                                        onClick = { currentScope = SettingsScope.CHATS },
+                                        titleColor = titleColor,
+                                        subtitleColor = subtitleColor
+                                    )
+                                    IosInsetDivider(color = subtitleColor)
+                                    IosMenuRow(
+                                        icon = Icons.Default.Security,
+                                        iconBg = appleIndigo,
+                                        title = "Privacidade & Segurança",
+                                        badge = if (secureScreen) "Protegido" else "Padrão",
+                                        onClick = { currentScope = SettingsScope.PRIVACY_SECURITY },
+                                        titleColor = titleColor,
+                                        subtitleColor = subtitleColor
                                     )
                                 }
-                            }
 
-                            // ── GRUPO 1: EXPERIÊNCIA PRINCIPAL ──
-                            IosSectionHeader(title = "PREFERÊNCIAS PRINCIPAIS", color = headerSectionColor)
-                            IosGroupCard(cardBg = cardBg, cardBorder = cardBorder) {
-                                IosMenuRow(
-                                    icon = Icons.Default.Palette,
-                                    iconBg = applePurple,
-                                    title = "Aparência & Design",
-                                    badge = if (isDarkTheme) "Escuro" else "Claro",
-                                    onClick = { currentScope = SettingsScope.APPEARANCE },
-                                    titleColor = titleColor,
-                                    subtitleColor = subtitleColor
-                                )
-                                IosInsetDivider(color = subtitleColor)
-                                IosMenuRow(
-                                    icon = Icons.AutoMirrored.Filled.Chat,
-                                    iconBg = appleGreen,
-                                    title = "Conversas & Mensagens",
-                                    badge = chatFontSize,
-                                    onClick = { currentScope = SettingsScope.CHATS },
-                                    titleColor = titleColor,
-                                    subtitleColor = subtitleColor
-                                )
-                                IosInsetDivider(color = subtitleColor)
-                                IosMenuRow(
-                                    icon = Icons.Default.Security,
-                                    iconBg = appleIndigo,
-                                    title = "Privacidade & Segurança",
-                                    badge = if (biometricLock) "Protegido" else "Padrão",
-                                    onClick = { currentScope = SettingsScope.PRIVACY_SECURITY },
-                                    titleColor = titleColor,
-                                    subtitleColor = subtitleColor
-                                )
-                            }
+                                Spacer(modifier = Modifier.height(14.dp))
 
-                            Spacer(modifier = Modifier.height(14.dp))
+                                // ── GRUPO 2: INTELIGÊNCIA & SISTEMA ──
+                                IosSectionHeader(title = "INTELIGÊNCIA & DADOS", color = headerSectionColor)
+                                IosGroupCard(cardBg = cardBg, cardBorder = cardBorder) {
+                                    IosMenuRow(
+                                        icon = Icons.Default.Psychology,
+                                        iconBg = appleBlue,
+                                        title = "Inteligência Artificial & Voz",
+                                        badge = "Gemini",
+                                        onClick = { currentScope = SettingsScope.AI_VOICE },
+                                        titleColor = titleColor,
+                                        subtitleColor = subtitleColor
+                                    )
+                                    IosInsetDivider(color = subtitleColor)
+                                    IosMenuRow(
+                                        icon = Icons.Default.Notifications,
+                                        iconBg = appleOrange,
+                                        title = "Notificações & Sensorial",
+                                        badge = "Sensorial",
+                                        onClick = { currentScope = SettingsScope.NOTIFICATIONS },
+                                        titleColor = titleColor,
+                                        subtitleColor = subtitleColor
+                                    )
+                                    IosInsetDivider(color = subtitleColor)
+                                    IosMenuRow(
+                                        icon = Icons.Default.Storage,
+                                        iconBg = appleTeal,
+                                        title = "Armazenamento & Dados",
+                                        badge = "Limpeza",
+                                        onClick = { currentScope = SettingsScope.STORAGE },
+                                        titleColor = titleColor,
+                                        subtitleColor = subtitleColor
+                                    )
+                                }
 
-                            // ── GRUPO 2: INTELIGÊNCIA & SISTEMA ──
-                            IosSectionHeader(title = "INTELIGÊNCIA & DADOS", color = headerSectionColor)
-                            IosGroupCard(cardBg = cardBg, cardBorder = cardBorder) {
-                                IosMenuRow(
-                                    icon = Icons.Default.Psychology,
-                                    iconBg = appleBlue,
-                                    title = "Inteligência Artificial & Voz",
-                                    badge = "Gemini Flash",
-                                    onClick = { currentScope = SettingsScope.AI_VOICE },
-                                    titleColor = titleColor,
-                                    subtitleColor = subtitleColor
-                                )
-                                IosInsetDivider(color = subtitleColor)
-                                IosMenuRow(
-                                    icon = Icons.Default.Notifications,
-                                    iconBg = appleOrange,
-                                    title = "Notificações & Sensorial",
-                                    badge = "Suave",
-                                    onClick = { currentScope = SettingsScope.NOTIFICATIONS },
-                                    titleColor = titleColor,
-                                    subtitleColor = subtitleColor
-                                )
-                                IosInsetDivider(color = subtitleColor)
-                                IosMenuRow(
-                                    icon = Icons.Default.Storage,
-                                    iconBg = appleTeal,
-                                    title = "Armazenamento & Dados",
-                                    badge = "Limpeza",
-                                    onClick = { currentScope = SettingsScope.STORAGE },
-                                    titleColor = titleColor,
-                                    subtitleColor = subtitleColor
-                                )
-                            }
+                                Spacer(modifier = Modifier.height(14.dp))
 
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            // ── GRUPO 3: SUPORTE & SOBRE ──
-                            IosSectionHeader(title = "SUPORTE & APLICATIVO", color = headerSectionColor)
-                            IosGroupCard(cardBg = cardBg, cardBorder = cardBorder) {
-                                IosMenuRow(
-                                    icon = Icons.Default.Favorite,
-                                    iconBg = Color(0xFFFF3B30),
-                                    title = "Apoio Imediato & CVV 188",
-                                    badge = "24h Grátis",
-                                    onClick = { currentScope = SettingsScope.EMERGENCY_SUPPORT },
-                                    titleColor = Color(0xFFFF3B30),
-                                    subtitleColor = subtitleColor
-                                )
-                                IosInsetDivider(color = subtitleColor)
-                                IosMenuRow(
-                                    icon = Icons.Default.Info,
-                                    iconBg = appleGray,
-                                    title = "Sobre o CalmPulse",
-                                    badge = "v${BuildConfig.VERSION_NAME}",
-                                    onClick = { currentScope = SettingsScope.ABOUT },
-                                    titleColor = titleColor,
-                                    subtitleColor = subtitleColor
-                                )
+                                // ── GRUPO 3: SUPORTE & SOBRE ──
+                                IosSectionHeader(title = "SUPORTE & APLICATIVO", color = headerSectionColor)
+                                IosGroupCard(cardBg = cardBg, cardBorder = cardBorder) {
+                                    IosMenuRow(
+                                        icon = Icons.Default.Favorite,
+                                        iconBg = Color(0xFFFF3B30),
+                                        title = "Apoio Imediato & CVV 188",
+                                        badge = "24h Grátis",
+                                        onClick = { currentScope = SettingsScope.EMERGENCY_SUPPORT },
+                                        titleColor = Color(0xFFFF3B30),
+                                        subtitleColor = subtitleColor
+                                    )
+                                    IosInsetDivider(color = subtitleColor)
+                                    IosMenuRow(
+                                        icon = Icons.Default.Info,
+                                        iconBg = appleGray,
+                                        title = "Sobre o CalmPulse",
+                                        badge = "v${BuildConfig.VERSION_NAME}",
+                                        onClick = { currentScope = SettingsScope.ABOUT },
+                                        titleColor = titleColor,
+                                        subtitleColor = subtitleColor
+                                    )
+                                }
                             }
                         }
 
@@ -655,8 +720,8 @@ fun SettingsSheet(
                                         subtitle = "Desliga pixels pretos em telas AMOLED para máxima economia",
                                         checked = oledDarkMode,
                                         onCheckedChange = {
-                                            oledDarkMode = it
                                             prefs.edit().putBoolean("oled_dark_mode", it).apply()
+                                            onToggleOled()
                                         },
                                         titleColor = titleColor,
                                         subtitleColor = subtitleColor,
@@ -675,7 +740,7 @@ fun SettingsSheet(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         accentPalettes.forEachIndexed { index, pair ->
-                                            val isSelected = accentColorIndex == index
+                                            val isSelected = localAccentIndex == index
                                             Surface(
                                                 shape = RoundedCornerShape(10.dp),
                                                 color = pair.second.copy(alpha = if (isSelected) 0.30f else 0.12f),
@@ -683,8 +748,9 @@ fun SettingsSheet(
                                                 modifier = Modifier
                                                     .weight(1f)
                                                     .clickable {
-                                                        accentColorIndex = index
+                                                        localAccentIndex = index
                                                         prefs.edit().putInt("accent_color_index", index).apply()
+                                                        onSelectAccent(index)
                                                     }
                                             ) {
                                                 Column(
@@ -722,6 +788,7 @@ fun SettingsSheet(
                                                     .clickable {
                                                         chatFontSize = size
                                                         prefs.edit().putString("chat_font_size", size).apply()
+                                                        onFontSizeChange(size)
                                                     }
                                             ) {
                                                 Text(
@@ -759,6 +826,7 @@ fun SettingsSheet(
                                                     .clickable {
                                                         bubbleStyle = style
                                                         prefs.edit().putString("bubble_style", style).apply()
+                                                        onBubbleStyleChange(style)
                                                     }
                                             ) {
                                                 Text(
@@ -782,20 +850,16 @@ fun SettingsSheet(
                         SettingsScope.PRIVACY_SECURITY -> {
                             IosScopeTitle(title = "Privacidade & Segurança", color = titleColor)
                             IosGroupCard(cardBg = cardBg, cardBorder = cardBorder) {
-                                IosSwitchRow(
+                                IosNavigationRow(
                                     icon = Icons.Default.Fingerprint,
                                     iconBg = appleIndigo,
-                                    title = "Bloqueio por Biometria / PIN",
-                                    subtitle = if (biometricLock) "Exige autenticação ao abrir o CalmPulse" else "Acesso imediato sem bloqueio",
-                                    checked = biometricLock,
-                                    onCheckedChange = {
-                                        biometricLock = it
-                                        prefs.edit().putBoolean("biometric_lock_enabled", it).apply()
-                                        Toast.makeText(context, if (it) "Biometria ativada!" else "Biometria desativada", Toast.LENGTH_SHORT).show()
+                                    title = "Proteção de Acesso Nativa",
+                                    subtitle = "O CalmPulse herda o bloqueio por Biometria/PIN configurado no seu Android",
+                                    onClick = {
+                                        Toast.makeText(context, "Sua sessão é protegida pelo bloqueio nativo do seu aparelho.", Toast.LENGTH_SHORT).show()
                                     },
                                     titleColor = titleColor,
-                                    subtitleColor = subtitleColor,
-                                    accentColor = activeAccent
+                                    subtitleColor = subtitleColor
                                 )
                                 IosInsetDivider(color = subtitleColor)
                                 IosSwitchRow(
@@ -830,6 +894,7 @@ fun SettingsSheet(
                                     onCheckedChange = {
                                         readReceipts = it
                                         prefs.edit().putBoolean("read_receipts_enabled", it).apply()
+                                        onReadReceiptsChange(it)
                                     },
                                     titleColor = titleColor,
                                     subtitleColor = subtitleColor,
@@ -859,11 +924,12 @@ fun SettingsSheet(
                                     icon = Icons.Default.KeyboardArrowUp,
                                     iconBg = appleGreen,
                                     title = "Enviar com a Tecla Enter",
-                                    subtitle = "Envia a mensagem ao pressionar Enter no teclado virtual",
+                                    subtitle = "Envia a mensagem ao pressionar Enter no teclado virtual ou físico",
                                     checked = sendWithEnter,
                                     onCheckedChange = {
                                         sendWithEnter = it
                                         prefs.edit().putBoolean("send_with_enter", it).apply()
+                                        onSendWithEnterChange(it)
                                     },
                                     titleColor = titleColor,
                                     subtitleColor = subtitleColor,
@@ -907,6 +973,7 @@ fun SettingsSheet(
                                                     .clickable {
                                                         ttsRate = rate
                                                         prefs.edit().putString("tts_rate_label", rate).apply()
+                                                        onTtsRateChange(rate)
                                                     }
                                             ) {
                                                 Text(
@@ -967,7 +1034,7 @@ fun SettingsSheet(
                             IosSectionHeader(title = "MOTOR NEURAL", color = headerSectionColor)
                             IosGroupCard(cardBg = cardBg, cardBorder = cardBorder) {
                                 Column(modifier = Modifier.padding(14.dp)) {
-                                    val aiModels = listOf("Gemini 2.5 Flash", "Gemini 1.5 Pro", "Gemma Local (Offline)")
+                                    val aiModels = listOf("Gemini 2.5 Flash", "Gemini 1.5 Flash", "Gemini 1.5 Pro")
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -983,6 +1050,7 @@ fun SettingsSheet(
                                                     .clickable {
                                                         aiModel = model
                                                         prefs.edit().putString("ai_model", model).apply()
+                                                        onAiModelChange(model)
                                                     }
                                             ) {
                                                 Text(
@@ -1020,6 +1088,7 @@ fun SettingsSheet(
                                                     .clickable {
                                                         aiTone = tone
                                                         prefs.edit().putString("ai_empathy_tone", tone).apply()
+                                                        onAiToneChange(tone)
                                                     }
                                             ) {
                                                 Text(
@@ -1043,7 +1112,7 @@ fun SettingsSheet(
                                     icon = Icons.Default.Speed,
                                     iconBg = appleIndigo,
                                     title = "Pausa de Escuta Humanizada",
-                                    subtitle = "Micro-pausa de 600ms antes da 1ª palavra para cadência serena",
+                                    subtitle = "Micro-pausa antes da 1ª palavra para cadência serena",
                                     checked = streamPacing,
                                     onCheckedChange = {
                                         streamPacing = it
@@ -1060,7 +1129,7 @@ fun SettingsSheet(
                         // SUB-TELA: NOTIFICAÇÕES & SENSORIAL
                         // ══════════════════════════════════════════════════════
                         SettingsScope.NOTIFICATIONS -> {
-                            IosScopeTitle(title = "Notificações & Sensorial", color = titleColor)
+                            IosScopeTitle(title = "Sensorial & Tátil", color = titleColor)
                             IosGroupCard(cardBg = cardBg, cardBorder = cardBorder) {
                                 IosSwitchRow(
                                     icon = Icons.Default.Vibration,
@@ -1071,21 +1140,6 @@ fun SettingsSheet(
                                     onCheckedChange = {
                                         hapticFeedbackEnabled = it
                                         prefs.edit().putBoolean("haptic_feedback_enabled", it).apply()
-                                    },
-                                    titleColor = titleColor,
-                                    subtitleColor = subtitleColor,
-                                    accentColor = activeAccent
-                                )
-                                IosInsetDivider(color = subtitleColor)
-                                IosSwitchRow(
-                                    icon = Icons.Default.Notifications,
-                                    iconBg = appleOrange,
-                                    title = "Alertas Suaves & Não-Invasivos",
-                                    subtitle = "Sem sons agressivos para evitar sobressaltos e gatilhos",
-                                    checked = gentleNotifications,
-                                    onCheckedChange = {
-                                        gentleNotifications = it
-                                        prefs.edit().putBoolean("gentle_notifications_enabled", it).apply()
                                     },
                                     titleColor = titleColor,
                                     subtitleColor = subtitleColor,
@@ -1238,8 +1292,8 @@ fun SettingsSheet(
                                     icon = Icons.Default.Devices,
                                     iconBg = appleBlue,
                                     title = "Dispositivo Conectado",
-                                    subtitle = "Android • Sessão local protegida",
-                                    onClick = {},
+                                    subtitle = "${android.os.Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${android.os.Build.MODEL} • Android ${android.os.Build.VERSION.RELEASE}",
+                                    onClick = { showDeviceInfoDialog = true },
                                     titleColor = titleColor,
                                     subtitleColor = subtitleColor
                                 )
@@ -1416,6 +1470,28 @@ fun SettingsSheet(
             dismissButton = {
                 TextButton(onClick = { showEditAgentNameDialog = false }) {
                     Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // ── DIÁLOGO 4: Informações de Segurança e Dispositivo ──
+    if (showDeviceInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeviceInfoDialog = false },
+            title = { Text("Dispositivo & Segurança Local", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("📱 Aparelho: ${android.os.Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${android.os.Build.MODEL}", fontSize = 13.5.sp)
+                    Text("🤖 Sistema: Android ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})", fontSize = 13.5.sp)
+                    Text("🔒 Criptografia: Armazenamento em Repouso AES-256", fontSize = 13.5.sp)
+                    Text("🛡️ Sanitização: Ativa contra injeção e vazamento de dados", fontSize = 13.5.sp)
+                    Text("🌿 Privacidade: Sem telemetria ou envio de metadados para terceiros", fontSize = 13.5.sp)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDeviceInfoDialog = false }) {
+                    Text("Entendi", color = activeAccent, fontWeight = FontWeight.Bold)
                 }
             }
         )

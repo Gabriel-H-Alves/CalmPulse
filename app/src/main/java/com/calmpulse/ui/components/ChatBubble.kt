@@ -69,6 +69,9 @@ import java.util.Locale
 fun ChatBubble(
     message: ChatMessage,
     agentName: String = "CalmPulse",
+    fontSizeLevel: String = "Médio",
+    bubbleStyle: String = "Clássico iOS",
+    showReadReceipts: Boolean = true,
     isSpeakingThisMessage: Boolean = false,
     onSpeakClick: (String) -> Unit = {},
     onStopSpeakClick: () -> Unit = {}
@@ -103,21 +106,32 @@ fun ChatBubble(
         timeFormat.format(Date(message.timestamp))
     }
 
-    // Formato com cantos arredondados suaves
-    val bubbleShape = if (isUser) {
-        RoundedCornerShape(
-            topStart = 16.dp,
-            topEnd = 16.dp,
-            bottomStart = 16.dp,
-            bottomEnd = 3.dp
-        )
-    } else {
-        RoundedCornerShape(
-            topStart = 16.dp,
-            topEnd = 16.dp,
-            bottomStart = 3.dp,
-            bottomEnd = 16.dp
-        )
+    // Formato com cantos arredondados dinâmicos baseados na preferência
+    val bubbleShape = when (bubbleStyle) {
+        "Redondo 2025" -> RoundedCornerShape(20.dp)
+        "Compacto" -> RoundedCornerShape(8.dp)
+        else -> if (isUser) {
+            RoundedCornerShape(
+                topStart = 16.dp,
+                topEnd = 16.dp,
+                bottomStart = 16.dp,
+                bottomEnd = 3.dp
+            )
+        } else {
+            RoundedCornerShape(
+                topStart = 16.dp,
+                topEnd = 16.dp,
+                bottomStart = 3.dp,
+                bottomEnd = 16.dp
+            )
+        }
+    }
+
+    // Escala de fonte dinâmica baseada na preferência
+    val (dynamicFontSize, dynamicLineHeight) = when (fontSizeLevel) {
+        "Pequeno" -> 13.5.sp to 19.sp
+        "Grande" -> 17.sp to 24.sp
+        else -> 15.sp to 21.sp
     }
 
     Row(
@@ -140,7 +154,7 @@ fun ChatBubble(
                 )
                 .clip(bubbleShape)
                 .background(bubbleColor)
-                .clickable { /* Clique rápido neutro */ }
+                .clickable { copyAction() }
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Column {
@@ -167,29 +181,21 @@ fun ChatBubble(
                     }
                 }
 
-                // Conteúdo da Mensagem ou Animação de Digitação
+                // Conteúdo da Mensagem ou Animação de Digitação (SOMENTE AS 3 BOLINHAS)
                 if (message.text.isBlank() && message.isStreaming) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
                     ) {
                         TypingDotsIndicator(color = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "acolhendo...",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = timeColor,
-                                fontSize = 13.sp
-                            )
-                        )
                     }
                 } else {
                     Text(
                         text = message.text,
                         style = MaterialTheme.typography.bodyLarge.copy(
                             color = textColor,
-                            fontSize = 15.sp,
-                            lineHeight = 21.sp
+                            fontSize = dynamicFontSize,
+                            lineHeight = dynamicLineHeight
                         )
                     )
                 }
@@ -250,14 +256,14 @@ fun ChatBubble(
                         )
                     )
 
-                    // Indicador discreto de envio do usuário
-                    if (isUser) {
+                    // Indicador de leitura controlado pela preferência do usuário
+                    if (isUser && showReadReceipts) {
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
                             imageVector = Icons.Default.DoneAll,
-                            contentDescription = "Mensagem enviada",
-                            tint = timeColor.copy(alpha = 0.7f),
-                            modifier = Modifier.size(14.dp)
+                            contentDescription = "Mensagem enviada e lida",
+                            tint = WhatsAppBlueCheck,
+                            modifier = Modifier.size(15.dp)
                         )
                     }
                 }

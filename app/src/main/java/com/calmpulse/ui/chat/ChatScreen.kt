@@ -111,6 +111,18 @@ import com.calmpulse.ui.theme.WhatsAppInputFieldLight
 import com.calmpulse.ui.theme.WhatsAppTopBarDark
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import com.calmpulse.ui.theme.WhatsAppTopBarLight
+import com.calmpulse.data.model.MessageSender
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 
 enum class CalmPulseTab {
     CHAT,
@@ -122,7 +134,11 @@ enum class CalmPulseTab {
 fun ChatScreen(
     viewModel: ChatViewModel = viewModel(),
     isDarkTheme: Boolean = false,
+    oledDarkMode: Boolean = false,
+    accentColor: Color = WhatsAppGreen,
     onToggleTheme: () -> Unit = {},
+    onToggleOled: () -> Unit = {},
+    onSelectAccent: (Int) -> Unit = {},
     onCheckUpdate: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -130,9 +146,39 @@ fun ChatScreen(
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
 
+    var accentIndex by remember {
+        mutableIntStateOf(prefs.getInt("accent_color_index", 0))
+    }
+    var chatFontSize by remember {
+        mutableStateOf(prefs.getString("chat_font_size", "Médio") ?: "Médio")
+    }
+    var bubbleStyle by remember {
+        mutableStateOf(prefs.getString("bubble_style", "Clássico iOS") ?: "Clássico iOS")
+    }
+    var readReceipts by remember {
+        mutableStateOf(prefs.getBoolean("read_receipts_enabled", true))
+    }
+    var sendWithEnter by remember {
+        mutableStateOf(prefs.getBoolean("send_with_enter", true))
+    }
+    var autoTts by remember {
+        mutableStateOf(prefs.getBoolean("auto_tts_enabled", false))
+    }
+    var ttsRate by remember {
+        mutableStateOf(prefs.getString("tts_speech_rate", "1.0x") ?: "1.0x")
+    }
+    var aiModel by remember {
+        mutableStateOf(prefs.getString("selected_ai_model", "Gemini 2.5 Flash") ?: "Gemini 2.5 Flash")
+    }
+    var aiTone by remember {
+        mutableStateOf(prefs.getString("ai_empathy_tone", "Acolhedor & Empático") ?: "Acolhedor & Empático")
+    }
+
     LaunchedEffect(Unit) {
         val savedAgentName = prefs.getString("agent_name", "CalmPulse") ?: "CalmPulse"
         viewModel.initAgentName(savedAgentName)
+        viewModel.updateModel(aiModel)
+        viewModel.updateTone(aiTone)
     }
 
     DisposableEffect(Unit) {
@@ -169,7 +215,22 @@ fun ChatScreen(
         VoiceSpeaker(context) { speaking ->
             isSpeaking = speaking
             if (!speaking) currentSpokenText = null
+        }.also {
+            it.updateRateFromLabel(ttsRate)
         }
+    }
+
+    // Auto-TTS quando a resposta do agente conclui
+    var previousStreamingState by remember { mutableStateOf(false) }
+    LaunchedEffect(uiState.isStreaming) {
+        if (previousStreamingState && !uiState.isStreaming && autoTts) {
+            val lastMsg = uiState.messages.lastOrNull()
+            if (lastMsg != null && lastMsg.sender == MessageSender.AI && lastMsg.text.isNotBlank()) {
+                currentSpokenText = lastMsg.text
+                speaker.speak(lastMsg.text)
+            }
+        }
+        previousStreamingState = uiState.isStreaming
     }
 
     var recordingDurationSeconds by remember { mutableIntStateOf(0) }
@@ -323,7 +384,7 @@ fun ChatScreen(
                             Text(
                                 text = when {
                                     isListening -> "Ouvindo com calma..."
-                                    uiState.isStreaming -> "digitando com carinho..."
+                                    uiState.isStreaming -> "digitando..."
                                     isSpeaking -> "Falando agora..."
                                     else -> "apoio sereno • online"
                                 },
@@ -587,12 +648,32 @@ fun ChatScreen(
                                             .weight(1f)
                                             .clip(RoundedCornerShape(22.dp))
                                             .background(inputFieldBg)
+                                            .onKeyEvent { keyEvent ->
+                                                if (sendWithEnter && keyEvent.type == KeyEventType.KeyUp && keyEvent.key == Key.Enter) {
+                                                    if (!keyEvent.isShiftPressed && uiState.inputText.isNotBlank()) {
+                                                        viewModel.sendMessage()
+                                                        true
+                                                    } else false
+                                                } else false
+                                            }
                                             .padding(horizontal = 16.dp, vertical = 11.dp),
                                         textStyle = MaterialTheme.typography.bodyMedium.copy(
                                             color = primaryText,
                                             fontSize = 15.sp
                                         ),
-                                        cursorBrush = androidx.compose.ui.graphics.SolidColor(WhatsAppGreen),
+                                        keyboardOptions = KeyboardOptions(
+                                            capitalization = KeyboardCapitalization.Sentences,
+                                            keyboardType = KeyboardType.Text,
+                                            imeAction = if (sendWithEnter) ImeAction.Send else ImeAction.Default
+                                        ),
+                                        keyboardActions = KeyboardActions(
+                                            onSend = {
+                                                if (sendWithEnter && uiState.inputText.isNotBlank()) {
+                                                    viewModel.sendMessage()
+                                                }
+                                            }
+                                        ),
+                                        cursorBrush = androidx.compose.ui.graphics.SolidColor(accentColor),
                                         maxLines = 4,
                                         decorationBox = { innerTextField ->
                                             Box(contentAlignment = Alignment.CenterStart) {
@@ -807,6 +888,9 @@ fun ChatScreen(
                                 ChatBubble(
                                     message = message,
                                     agentName = uiState.agentName,
+                                    fontSizeLevel = chatFontSize,
+                                    bubbleStyle = bubbleStyle,
+                                    showReadReceipts = readReceipts,
                                     isSpeakingThisMessage = currentSpokenText == message.text && isSpeaking,
                                     onSpeakClick = { text ->
                                         currentSpokenText = text
@@ -874,7 +958,45 @@ fun ChatScreen(
                 isDarkTheme = isDarkTheme,
                 agentName = uiState.agentName,
                 onAgentNameChange = viewModel::updateAgentName,
+                oledDarkMode = oledDarkMode,
                 onToggleTheme = onToggleTheme,
+                onToggleOled = onToggleOled,
+                accentColorIndex = accentIndex,
+                onSelectAccent = { idx ->
+                    accentIndex = idx
+                    onSelectAccent(idx)
+                },
+                onTtsRateChange = { rate ->
+                    ttsRate = rate
+                    speaker.updateRateFromLabel(rate)
+                    prefs.edit().putString("tts_speech_rate", rate).apply()
+                },
+                onAiModelChange = { model ->
+                    aiModel = model
+                    viewModel.updateModel(model)
+                    prefs.edit().putString("selected_ai_model", model).apply()
+                },
+                onAiToneChange = { tone ->
+                    aiTone = tone
+                    viewModel.updateTone(tone)
+                    prefs.edit().putString("ai_empathy_tone", tone).apply()
+                },
+                onFontSizeChange = { size ->
+                    chatFontSize = size
+                    prefs.edit().putString("chat_font_size", size).apply()
+                },
+                onBubbleStyleChange = { style ->
+                    bubbleStyle = style
+                    prefs.edit().putString("bubble_style", style).apply()
+                },
+                onReadReceiptsChange = { enabled ->
+                    readReceipts = enabled
+                    prefs.edit().putBoolean("read_receipts_enabled", enabled).apply()
+                },
+                onSendWithEnterChange = { enabled ->
+                    sendWithEnter = enabled
+                    prefs.edit().putBoolean("send_with_enter", enabled).apply()
+                },
                 onResetChat = {
                     showSettingsSheet = false
                     showResetConfirmDialog = true

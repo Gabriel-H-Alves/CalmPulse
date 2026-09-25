@@ -41,6 +41,8 @@ class GeminiChatRepository(
     private var activeModelIndex = 0
     private var chatSession: Chat? = null
     private var currentAgentName: String = "CalmPulse"
+    private var currentTone: String = "Acolhedor & Empático"
+    private var preferredModel: String? = null
 
     override fun setAgentName(name: String) {
         val trimmed = name.trim()
@@ -51,19 +53,37 @@ class GeminiChatRepository(
         }
     }
 
+    fun setEmpathyTone(tone: String) {
+        val trimmed = tone.trim()
+        if (trimmed.isNotBlank() && trimmed != currentTone) {
+            currentTone = trimmed
+            chatSession = null
+        }
+    }
+
+    fun setPreferredModel(model: String) {
+        preferredModel = when {
+            model.contains("2.5") -> "gemini-2.5-flash"
+            model.contains("1.5 Pro", ignoreCase = true) -> "gemini-1.5-pro"
+            model.contains("1.5 Flash", ignoreCase = true) -> "gemini-1.5-flash"
+            else -> null
+        }
+        chatSession = null
+    }
+
     private fun createGenerativeModel(modelName: String): GenerativeModel {
         return GenerativeModel(
             modelName = modelName,
             apiKey = BuildConfig.GEMINI_API_KEY,
             systemInstruction = com.google.ai.client.generativeai.type.content {
-                text(SystemPrompt.getInstruction(currentAgentName))
+                text(SystemPrompt.getInstruction(currentAgentName, currentTone))
             }
         )
     }
 
     @Synchronized
     private fun getOrCreateChat(): Pair<Chat, String> {
-        val modelName = CANDIDATE_MODELS[activeModelIndex.coerceIn(0, CANDIDATE_MODELS.lastIndex)]
+        val modelName = preferredModel ?: CANDIDATE_MODELS[activeModelIndex.coerceIn(0, CANDIDATE_MODELS.lastIndex)]
         val session = chatSession ?: createGenerativeModel(modelName)
             .startChat()
             .also { chatSession = it }

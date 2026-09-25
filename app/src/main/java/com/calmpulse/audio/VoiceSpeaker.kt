@@ -14,8 +14,13 @@ class VoiceSpeaker(
 ) {
     private var tts: TextToSpeech? = null
     private var isInitialized = false
+    private var currentRate = 0.85f
 
     init {
+        val prefs = context.getSharedPreferences("calmpulse_prefs", Context.MODE_PRIVATE)
+        val rateLabel = prefs.getString("tts_rate_label", "0.85x (Sereno)") ?: "0.85x (Sereno)"
+        currentRate = parseRate(rateLabel)
+
         tts = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 // Tenta configurar o idioma em Português do Brasil
@@ -23,8 +28,7 @@ class VoiceSpeaker(
                 if (result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED) {
                     isInitialized = true
                     
-                    // REQUISITO DO DESAFIO: Tom sereno e desacelerado
-                    tts?.setSpeechRate(0.85f) // Redução de velocidade para ritmo calmante
+                    tts?.setSpeechRate(currentRate)
                     tts?.setPitch(0.90f)      // Tom ligeiramente mais aveludado/grave
                 }
             }
@@ -62,6 +66,22 @@ class VoiceSpeaker(
     fun stop() {
         tts?.stop()
         onSpeakingStateChanged(false)
+    }
+
+    fun setSpeechRate(rate: Float) {
+        currentRate = rate
+        tts?.setSpeechRate(rate)
+    }
+
+    fun updateRateFromLabel(label: String) {
+        val rate = parseRate(label)
+        setSpeechRate(rate)
+    }
+
+    private fun parseRate(label: String): Float = when {
+        label.contains("1.25") -> 1.25f
+        label.contains("1.0") -> 1.0f
+        else -> 0.85f
     }
 
     /**

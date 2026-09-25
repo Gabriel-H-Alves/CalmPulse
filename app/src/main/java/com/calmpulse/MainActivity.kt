@@ -40,6 +40,17 @@ class MainActivity : ComponentActivity() {
             var isDarkTheme by remember {
                 mutableStateOf(prefs.getBoolean("dark_mode_enabled", systemInDark))
             }
+            var oledDarkMode by remember {
+                mutableStateOf(prefs.getBoolean("oled_dark_mode", false))
+            }
+            var accentColorIndex by remember {
+                androidx.compose.runtime.mutableIntStateOf(prefs.getInt("accent_color_index", 0))
+            }
+            val activeAccent = remember(accentColorIndex) {
+                com.calmpulse.ui.theme.CalmPulseAccentPalettes.getOrElse(accentColorIndex) {
+                    com.calmpulse.ui.theme.CalmPulseAccentPalettes[0]
+                }.second
+            }
 
             val toggleTheme = {
                 val newMode = !isDarkTheme
@@ -65,10 +76,25 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            CalmPulseTheme(darkTheme = isDarkTheme) {
+            CalmPulseTheme(
+                darkTheme = isDarkTheme,
+                oledDark = oledDarkMode,
+                accentColor = activeAccent
+            ) {
                 ChatScreen(
                     isDarkTheme = isDarkTheme,
+                    oledDarkMode = oledDarkMode,
+                    accentColor = activeAccent,
                     onToggleTheme = toggleTheme,
+                    onToggleOled = {
+                        val newOled = !oledDarkMode
+                        oledDarkMode = newOled
+                        prefs.edit().putBoolean("oled_dark_mode", newOled).apply()
+                    },
+                    onSelectAccent = { newIdx ->
+                        accentColorIndex = newIdx
+                        prefs.edit().putInt("accent_color_index", newIdx).apply()
+                    },
                     onCheckUpdate = {
                         scope.launch {
                             Toast.makeText(this@MainActivity, "Buscando atualizações...", Toast.LENGTH_SHORT).show()

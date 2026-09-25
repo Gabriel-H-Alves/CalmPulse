@@ -53,6 +53,14 @@ class ChatViewModel(
         }
     }
 
+    fun updateModel(model: String) {
+        (repository as? GeminiChatRepository)?.setPreferredModel(model)
+    }
+
+    fun updateTone(tone: String) {
+        (repository as? GeminiChatRepository)?.setEmpathyTone(tone)
+    }
+
     fun onInputTextChanged(newText: String) {
         _uiState.update { it.copy(inputText = newText) }
     }
