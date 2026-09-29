@@ -27,7 +27,7 @@ class SecurityHardeningTest {
 
     @Test
     fun `sanitizer should truncate prompts exceeding maximum length`() {
-        val excessivelyLongInput = "A".repeat(650)
+        val excessivelyLongInput = "A".repeat(InputSanitizer.MAX_PROMPT_LENGTH + 500)
         val cleaned = InputSanitizer.sanitize(excessivelyLongInput)
 
         assertEquals(InputSanitizer.MAX_PROMPT_LENGTH, cleaned.length)

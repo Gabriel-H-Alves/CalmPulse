@@ -1,15 +1,16 @@
 package com.calmpulse.audio
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.speech.RecognitionListener
+import android.speech.RecognitionService
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
-import java.util.Locale
 
 /**
  * Gerenciador reativo e resiliente do SpeechRecognizer do Android.
@@ -54,7 +55,7 @@ class VoiceRecognizer(
                     return@post
                 }
 
-                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context).apply {
+                speechRecognizer = createBestSpeechRecognizer().apply {
                     setRecognitionListener(object : RecognitionListener {
                         override fun onReadyForSpeech(params: Bundle?) {
                             Log.d(TAG, "onReadyForSpeech: microfone pronto para captar")
@@ -130,11 +131,19 @@ class VoiceRecognizer(
 
                 val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                     putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale("pt", "BR"))
+                    // CRÍTICO: Deve ser String "pt-BR", nunca objeto Locale (senão o Android descarta e usa inglês por padrão)
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, "pt-BR")
                     putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "pt-BR")
+                    putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, "pt-BR")
+                    putExtra("android.speech.extra.EXTRA_ADDITIONAL_LANGUAGES", arrayOf("pt-BR", "pt_BR"))
                     putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                     putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
                     putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
+                    putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false)
+                    // Pausas confortáveis para que a pessoa possa respirar sem cortar o áudio no meio
+                    putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2500L)
+                    putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
+                    putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1500L)
                 }
 
                 speechRecognizer?.startListening(intent)
@@ -174,6 +183,35 @@ class VoiceRecognizer(
             onListeningStateChanged(false)
             cleanUpRecognizer()
         }
+    }
+
+    private fun createBestSpeechRecognizer(): SpeechRecognizer {
+        try {
+            val pm = context.packageManager
+            val serviceIntent = Intent(RecognitionService.SERVICE_INTERFACE)
+            val services = pm.queryIntentServices(serviceIntent, 0)
+
+            // Prioriza o motor do Google (Google Quick Search Box / Speech Services),
+            // que possui o melhor modelo acústico e vocabulário para Português do Brasil no Android.
+            val googleService = services.firstOrNull { resolveInfo ->
+                val pkg = resolveInfo.serviceInfo.packageName.lowercase()
+                pkg.contains("com.google.android.googlequicksearchbox") ||
+                        pkg.contains("com.google.android.tts") ||
+                        pkg.contains("google")
+            }
+
+            if (googleService != null) {
+                val component = ComponentName(
+                    googleService.serviceInfo.packageName,
+                    googleService.serviceInfo.name
+                )
+                Log.d(TAG, "Utilizando serviço de reconhecimento do Google: ${component.flattenToShortString()}")
+                return SpeechRecognizer.createSpeechRecognizer(context, component)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Não foi possível selecionar serviço específico do Google: ${e.message}")
+        }
+        return SpeechRecognizer.createSpeechRecognizer(context)
     }
 
     private fun cleanUpRecognizer() {

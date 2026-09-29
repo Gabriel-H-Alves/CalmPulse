@@ -220,14 +220,17 @@ fun ChatScreen(
         }
     }
 
-    // Auto-TTS quando a resposta do agente conclui
+    var isVoiceReplyPending by remember { mutableStateOf(false) }
+
+    // Auto-TTS quando a resposta do agente conclui (se ativado nas configurações ou se a mensagem enviada foi por voz)
     var previousStreamingState by remember { mutableStateOf(false) }
     LaunchedEffect(uiState.isStreaming) {
-        if (previousStreamingState && !uiState.isStreaming && autoTts) {
+        if (previousStreamingState && !uiState.isStreaming && (autoTts || isVoiceReplyPending)) {
             val lastMsg = uiState.messages.lastOrNull()
             if (lastMsg != null && lastMsg.sender == MessageSender.AI && lastMsg.text.isNotBlank()) {
                 currentSpokenText = lastMsg.text
                 speaker.speak(lastMsg.text)
+                isVoiceReplyPending = false
             }
         }
         previousStreamingState = uiState.isStreaming
@@ -243,6 +246,7 @@ fun ChatScreen(
             context = context,
             onResult = { spokenText ->
                 liveVoiceText = spokenText
+                isVoiceReplyPending = true
                 viewModel.sendMessage(spokenText)
             },
             onPartialResult = { partial ->
@@ -621,6 +625,7 @@ fun ChatScreen(
                                                 isListening = false
                                                 recognizer.cancelListening()
                                                 if (textToSend.isNotBlank()) {
+                                                    isVoiceReplyPending = true
                                                     viewModel.sendMessage(textToSend)
                                                 }
                                             },

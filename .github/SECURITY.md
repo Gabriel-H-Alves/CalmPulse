@@ -10,9 +10,9 @@ Apenas a versão mais recente em produção e a versão imediatamente anterior r
 
 | Versão | Suporte a Correções |
 | :--- | :---: |
-| 1.4.x | :white_check_mark: Ativo |
-| 1.3.x | :white_check_mark: Ativo |
-| < 1.3.0 | :x: Descontinuado |
+| 1.9.x | :white_check_mark: Ativo |
+| 1.8.x | :white_check_mark: Ativo |
+| < 1.8.0 | :x: Descontinuado |
 
 ---
 
